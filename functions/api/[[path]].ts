@@ -3,7 +3,7 @@
  */
 
 import type { D1Database, R2Bucket } from '~/utils/db';
-import { getJWTFromCookie, verifyJWT } from '~/utils/jwt';
+import { getJWTFromCookie, verifyJWT, createJWTCookie } from '~/utils/jwt';
 import { logAudit, getClientIP, getUserAgent } from '~/utils/audit';
 import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from '~/utils/rate-limit';
 
@@ -152,7 +152,6 @@ export async function onRequest(context: {
 
     // Si hay token en la respuesta (login/register), configurar cookie
     if (responseBody?.token) {
-      const { createJWTCookie } = await import('~/utils/jwt');
       headers['Set-Cookie'] = createJWTCookie(responseBody.token);
       // Remover token del body (no debe enviarse en JSON)
       delete responseBody.token;
