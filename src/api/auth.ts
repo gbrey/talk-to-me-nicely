@@ -117,7 +117,14 @@ async function register(
   ctx: Context
 ): Promise<{ body: unknown; status: number }> {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.error('Failed to parse JSON:', e);
+      return { body: { error: 'Invalid JSON in request body' }, status: 400 };
+    }
+    
     const { email, password, role = 'parent' } = body;
     console.log('Register attempt:', { email: email?.substring(0, 5) + '...', role });
 
@@ -237,7 +244,14 @@ async function login(
   ctx: Context
 ): Promise<{ body: unknown; status: number }> {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.error('Failed to parse JSON:', e);
+      return { body: { error: 'Invalid JSON in request body' }, status: 400 };
+    }
+    
     const { email, password } = body;
     console.log('Login attempt:', { email: email?.substring(0, 5) + '...' });
 
