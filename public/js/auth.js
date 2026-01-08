@@ -15,12 +15,12 @@ export async function register(email, password, role = 'parent') {
       role,
     });
 
-    if (response.token) {
-      // Guardar token en cookie (manejado por el servidor)
-      document.cookie = `jwt=${response.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+    // La cookie se configura automáticamente por el servidor
+    if (response.success && response.user) {
+      return { success: true, user: response.user };
     }
 
-    return { success: true, user: response.user };
+    return { success: false, error: 'Error al registrarse' };
   } catch (error) {
     return { success: false, error: handleApiError(error) };
   }
@@ -36,11 +36,13 @@ export async function login(email, password) {
       password,
     });
 
-    if (response.token) {
-      document.cookie = `jwt=${response.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+    // La cookie se configura automáticamente por el servidor
+    // Solo verificamos que la respuesta sea exitosa
+    if (response.success && response.user) {
+      return { success: true, user: response.user };
     }
 
-    return { success: true, user: response.user };
+    return { success: false, error: 'Error al iniciar sesión' };
   } catch (error) {
     return { success: false, error: handleApiError(error) };
   }

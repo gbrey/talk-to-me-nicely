@@ -284,6 +284,7 @@ async function login(
         role: user.role,
         emailVerified: user.email_verified === 1,
       },
+      token,
     },
     status: 200,
   };

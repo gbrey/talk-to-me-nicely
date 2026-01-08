@@ -143,12 +143,24 @@ export async function onRequest(context: {
       }).catch(console.error);
     }
 
-    return new Response(JSON.stringify(response.body), {
+    // Configurar cookie JWT si hay token en la respuesta
+    const responseBody = response.body as any;
+    const headers: Record<string, string> = {
+      ...responseHeaders,
+      'Content-Type': 'application/json',
+    };
+
+    // Si hay token en la respuesta (login/register), configurar cookie
+    if (responseBody?.token) {
+      const { createJWTCookie } = await import('~/utils/jwt');
+      headers['Set-Cookie'] = createJWTCookie(responseBody.token);
+      // Remover token del body (no debe enviarse en JSON)
+      delete responseBody.token;
+    }
+
+    return new Response(JSON.stringify(responseBody), {
       status: response.status,
-      headers: {
-        ...responseHeaders,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
   } catch (error) {
     console.error('API Error:', error);
