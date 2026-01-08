@@ -3,121 +3,1518 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Talk to me nicely - Inicio</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <link rel="stylesheet" href="/css/custom.css">
+  <title>Hablemos Bien | Comunicación para padres separados</title>
+  <meta name="description" content="La app que ayuda a padres separados a comunicarse mejor. IA que sugiere, vos decidís. Protegé a tus hijos del conflicto.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --color-cream: #FDF8F3;
+      --color-warm-white: #FFFCF9;
+      --color-sage: #7A9E7E;
+      --color-sage-light: #A8C5AB;
+      --color-sage-dark: #5B7A5E;
+      --color-terracotta: #C4785E;
+      --color-terracotta-light: #E8A088;
+      --color-navy: #2C3E50;
+      --color-navy-light: #34495E;
+      --color-text: #3D3D3D;
+      --color-text-light: #6B6B6B;
+      --color-border: #E8E2DB;
+      
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'DM Sans', -apple-system, sans-serif;
+      
+      --shadow-soft: 0 4px 20px rgba(0,0,0,0.06);
+      --shadow-medium: 0 8px 40px rgba(0,0,0,0.08);
+      --shadow-large: 0 20px 60px rgba(0,0,0,0.1);
+      
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      font-family: var(--font-body);
+      color: var(--color-text);
+      background: var(--color-cream);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    /* Utility Classes */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    
+    /* Background Shapes */
+    .bg-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .bg-shape-1 {
+      width: 600px;
+      height: 600px;
+      background: var(--color-sage-light);
+      top: -200px;
+      right: -200px;
+    }
+    
+    .bg-shape-2 {
+      width: 400px;
+      height: 400px;
+      background: var(--color-terracotta-light);
+      bottom: -100px;
+      left: -100px;
+    }
+    
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      transition: all 0.3s ease;
+    }
+    
+    nav.scrolled {
+      background: rgba(253, 248, 243, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-soft);
+      padding: 12px 0;
+    }
+    
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--color-navy);
+    }
+    
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(122, 158, 126, 0.3);
+    }
+    
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+    
+    .nav-links a {
+      text-decoration: none;
+      color: var(--color-text);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.2s ease;
+    }
+    
+    .nav-links a:hover {
+      color: var(--color-sage-dark);
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(122, 158, 126, 0.35);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(122, 158, 126, 0.4);
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: var(--color-navy);
+      border: 2px solid var(--color-border);
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--color-sage);
+      background: var(--color-warm-white);
+    }
+    
+    .btn-large {
+      padding: 18px 36px;
+      font-size: 1.05rem;
+      border-radius: var(--radius-lg);
+    }
+    
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+    
+    .mobile-menu-btn span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--color-navy);
+      margin: 6px 0;
+      transition: all 0.3s ease;
+    }
+    
+    /* Hero Section */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      overflow: hidden;
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    
+    .hero-text {
+      max-width: 560px;
+    }
+    
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: white;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--color-sage-dark);
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-soft);
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .hero-badge::before {
+      content: '🇦🇷';
+      font-size: 1rem;
+    }
+    
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--color-navy);
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+    
+    .hero h1 span {
+      color: var(--color-sage);
+      position: relative;
+    }
+    
+    .hero h1 span::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: var(--color-sage-light);
+      opacity: 0.4;
+      z-index: -1;
+      border-radius: 4px;
+    }
+    
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--color-text-light);
+      margin-bottom: 32px;
+      line-height: 1.7;
+      animation: fadeInUp 0.6s ease-out 0.2s both;
+    }
+    
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.6s ease-out 0.3s both;
+    }
+    
+    .hero-visual {
+      position: relative;
+      animation: fadeIn 1s ease-out 0.4s both;
+    }
+    
+    .phone-mockup {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    
+    .phone-frame {
+      background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: var(--shadow-large), inset 0 0 0 1px rgba(255,255,255,0.1);
+    }
+    
+    .phone-screen {
+      background: white;
+      border-radius: 36px;
+      overflow: hidden;
+      aspect-ratio: 9/19;
+    }
+    
+    .phone-content {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .phone-header {
+      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
+      padding: 40px 20px 20px;
+      color: white;
+    }
+    
+    .phone-header h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .phone-header p {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    
+    .phone-chat {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #f8f9fa;
+    }
+    
+    .chat-bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      animation: bubbleIn 0.4s ease-out both;
+    }
+    
+    .chat-bubble.sent {
+      background: var(--color-sage);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 6px;
+      animation-delay: 0.6s;
+    }
+    
+    .chat-bubble.received {
+      background: white;
+      color: var(--color-text);
+      align-self: flex-start;
+      border-bottom-left-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      animation-delay: 0.8s;
+    }
+    
+    .chat-bubble.ai-suggestion {
+      background: linear-gradient(135deg, #FFF9E6 0%, #FFF3CD 100%);
+      border: 1px solid #F0E6C0;
+      max-width: 100%;
+      animation-delay: 1s;
+    }
+    
+    .ai-suggestion-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-terracotta);
+      margin-bottom: 6px;
+    }
+    
+    .phone-notch {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: #1a1a1a;
+      border-radius: 20px;
+      z-index: 10;
+    }
+    
+    .floating-card {
+      position: absolute;
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-medium);
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    .floating-card-1 {
+      top: 10%;
+      right: -20px;
+      animation-delay: 0s;
+    }
+    
+    .floating-card-2 {
+      bottom: 20%;
+      left: -30px;
+      animation-delay: 2s;
+    }
+    
+    .floating-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+    
+    .floating-card-1 .icon {
+      background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    }
+    
+    .floating-card-2 .icon {
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+    }
+    
+    .floating-card span {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--color-navy);
+    }
+    
+    /* Problem Section */
+    .problem {
+      padding: 100px 0;
+      background: white;
+      position: relative;
+    }
+    
+    .section-header {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto 60px;
+    }
+    
+    .section-label {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-sage);
+      margin-bottom: 16px;
+    }
+    
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      font-weight: 700;
+      color: var(--color-navy);
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    
+    .section-header p {
+      font-size: 1.15rem;
+      color: var(--color-text-light);
+      line-height: 1.7;
+    }
+    
+    .pain-points {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    
+    .pain-card {
+      background: var(--color-cream);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      border: 1px solid var(--color-border);
+      transition: all 0.3s ease;
+    }
+    
+    .pain-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-medium);
+    }
+    
+    .pain-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      background: white;
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .pain-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      margin-bottom: 12px;
+    }
+    
+    .pain-card p {
+      color: var(--color-text-light);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    /* Solution Section */
+    .solution {
+      padding: 100px 0;
+      background: linear-gradient(180deg, var(--color-cream) 0%, white 100%);
+      position: relative;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+    }
+    
+    .feature-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid var(--color-border);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--color-sage) 0%, var(--color-sage-light) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-medium);
+    }
+    
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+    
+    .feature-card.highlight {
+      grid-column: span 2;
+      background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+      color: white;
+    }
+    
+    .feature-card.highlight::before {
+      background: linear-gradient(90deg, var(--color-terracotta) 0%, var(--color-terracotta-light) 100%);
+    }
+    
+    .feature-card.highlight h3,
+    .feature-card.highlight p {
+      color: white;
+    }
+    
+    .feature-card.highlight p {
+      opacity: 0.85;
+    }
+    
+    .feature-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--color-sage-light) 0%, var(--color-sage) 100%);
+    }
+    
+    .feature-card.highlight .feature-icon {
+      background: rgba(255,255,255,0.15);
+    }
+    
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      margin-bottom: 12px;
+    }
+    
+    .feature-card p {
+      color: var(--color-text-light);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    
+    .feature-tag {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 16px;
+    }
+    
+    /* How it Works */
+    .how-it-works {
+      padding: 100px 0;
+      background: white;
+    }
+    
+    .steps {
+      display: flex;
+      gap: 40px;
+      position: relative;
+    }
+    
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: 80px;
+      right: 80px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--color-sage-light) 0%, var(--color-sage) 50%, var(--color-sage-light) 100%);
+    }
+    
+    .step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    
+    .step-number {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
+      color: white;
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 8px 24px rgba(122, 158, 126, 0.35);
+    }
+    
+    .step h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      margin-bottom: 12px;
+    }
+    
+    .step p {
+      color: var(--color-text-light);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    
+    /* Trust Section */
+    .trust {
+      padding: 80px 0;
+      background: var(--color-cream);
+    }
+    
+    .trust-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+      text-align: center;
+    }
+    
+    .trust-item {
+      padding: 24px;
+    }
+    
+    .trust-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin: 0 auto 16px;
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .trust-item h4 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      margin-bottom: 8px;
+    }
+    
+    .trust-item p {
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+    }
+    
+    /* Pricing */
+    .pricing {
+      padding: 100px 0;
+      background: white;
+    }
+    
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .pricing-card {
+      background: var(--color-cream);
+      border-radius: var(--radius-xl);
+      padding: 40px 32px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-4px);
+    }
+    
+    .pricing-card.popular {
+      background: white;
+      border-color: var(--color-sage);
+      box-shadow: var(--shadow-large);
+    }
+    
+    .pricing-card.popular::before {
+      content: 'Recomendado';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
+      color: white;
+      padding: 6px 20px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .pricing-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      margin-bottom: 8px;
+    }
+    
+    .pricing-card .price {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--color-navy);
+      margin: 16px 0;
+    }
+    
+    .pricing-card .price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--color-text-light);
+    }
+    
+    .pricing-card .price-note {
+      font-size: 0.85rem;
+      color: var(--color-text-light);
+      margin-bottom: 24px;
+    }
+    
+    .pricing-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 32px;
+    }
+    
+    .pricing-features li {
+      padding: 10px 0;
+      font-size: 0.95rem;
+      color: var(--color-text);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .pricing-features li::before {
+      content: '✓';
+      color: var(--color-sage);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .pricing-card .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    /* CTA Section */
+    .cta {
+      padding: 100px 0;
+      background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cta::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: var(--color-sage);
+      opacity: 0.1;
+      border-radius: 50%;
+      filter: blur(100px);
+    }
+    
+    .cta-content {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .cta h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      font-weight: 700;
+      color: white;
+      margin-bottom: 20px;
+    }
+    
+    .cta p {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .cta .btn-primary {
+      background: white;
+      color: var(--color-navy);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    
+    .cta .btn-primary:hover {
+      background: var(--color-cream);
+    }
+    
+    /* Footer */
+    footer {
+      background: var(--color-navy);
+      color: white;
+      padding: 60px 0 30px;
+    }
+    
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    
+    .footer-brand {
+      max-width: 300px;
+    }
+    
+    .footer-brand .logo {
+      color: white;
+      margin-bottom: 16px;
+    }
+    
+    .footer-brand p {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    .footer-links h4 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    
+    .footer-links ul {
+      list-style: none;
+    }
+    
+    .footer-links li {
+      margin-bottom: 12px;
+    }
+    
+    .footer-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+    
+    .footer-links a:hover {
+      color: white;
+    }
+    
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .footer-legal a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      margin-left: 24px;
+    }
+    
+    .footer-legal a:hover {
+      color: white;
+    }
+    
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes bubbleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      
+      .hero-text {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      
+      .hero-cta {
+        justify-content: center;
+      }
+      
+      .hero-visual {
+        order: -1;
+      }
+      
+      .phone-mockup {
+        max-width: 280px;
+      }
+      
+      .floating-card {
+        display: none;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .feature-card.highlight {
+        grid-column: span 1;
+      }
+      
+      .steps {
+        flex-direction: column;
+        gap: 32px;
+      }
+      
+      .steps::before {
+        display: none;
+      }
+      
+      .pricing-cards {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+      }
+      
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+      
+      .mobile-menu-btn {
+        display: block;
+      }
+      
+      .pain-points {
+        grid-template-columns: 1fr;
+      }
+      
+      .trust-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .footer-bottom {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+      
+      .footer-legal a {
+        margin: 0 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+      
+      .hero-cta {
+        flex-direction: column;
+      }
+      
+      .hero-cta .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .trust-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .cta-buttons {
+        flex-direction: column;
+      }
+      
+      .cta-buttons .btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-  <div x-data="homeApp()" x-init="checkAuth()" class="min-h-screen flex flex-col">
-    <!-- Hero Section -->
-    <div class="flex-1 flex items-center justify-center px-4 py-12">
-      <div class="max-w-4xl w-full text-center">
-        <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-          Talk to me nicely
-        </h1>
-        <p class="text-xl md:text-2xl text-gray-700 mb-4">
-          Comunicación civilizada para familias separadas
-        </p>
-        <p class="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
-          Una plataforma diseñada para proteger el bienestar emocional de los niños,
-          facilitando la comunicación estructurada y verificable entre padres.
-        </p>
-
-        <!-- Botones de Acción -->
-        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-          <a
-            href="/login.html"
-            class="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
-          >
-            Iniciar Sesión
-          </a>
-          <a
-            href="/login.html"
-            class="px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-lg hover:shadow-xl border-2 border-blue-600"
-          >
-            Registrarse
-          </a>
+<body>
+  <!-- Navigation -->
+  <nav id="navbar">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="/" class="logo">
+          <div class="logo-icon">💬</div>
+          <span class="logo-text">Hablemos Bien</span>
+        </a>
+        <div class="nav-links">
+          <a href="#problema">El problema</a>
+          <a href="#solucion">Solución</a>
+          <a href="#como-funciona">Cómo funciona</a>
+          <a href="#precios">Precios</a>
+          <a href="/login.html" class="btn btn-primary">Empezar gratis</a>
         </div>
-
-        <!-- Características -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
-          <div class="bg-white rounded-lg p-6 shadow-md">
-            <div class="text-4xl mb-4">💬</div>
-            <h3 class="text-xl font-bold mb-2">Mensajería Estructurada</h3>
-            <p class="text-gray-600">
-              Canales temáticos para organizar la comunicación de manera clara y civilizada
-            </p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-md">
-            <div class="text-4xl mb-4">🤖</div>
-            <h3 class="text-xl font-bold mb-2">IA Coach de Tono</h3>
-            <p class="text-gray-600">
-              Revisa el tono de tus mensajes antes de enviarlos para mantener la comunicación respetuosa
-            </p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-md">
-            <div class="text-4xl mb-4">📅</div>
-            <h3 class="text-xl font-bold mb-2">Calendario Compartido</h3>
-            <p class="text-gray-600">
-              Gestiona eventos, pickups y entregas con solicitudes de cambio verificables
-            </p>
-          </div>
-        </div>
-
-        <!-- Demo Credentials -->
-        <div x-show="showDemo" class="mt-12 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 max-w-2xl mx-auto">
-          <h3 class="text-lg font-bold text-yellow-800 mb-3">🔑 Credenciales de Prueba</h3>
-          <div class="text-left space-y-2 text-sm">
-            <p><strong>Padre:</strong> maria.garcia@example.com / Password123</p>
-            <p><strong>Hijo:</strong> sofia.garcia@example.com / 1234</p>
-            <p><strong>Profesional:</strong> abogado.martinez@example.com / Password123</p>
-          </div>
-          <button
-            @click="showDemo = false"
-            class="mt-4 text-yellow-700 hover:text-yellow-900 text-sm underline"
-          >
-            Ocultar
-          </button>
-        </div>
-        <button
-          x-show="!showDemo"
-          @click="showDemo = true"
-          class="mt-8 text-blue-600 hover:text-blue-800 text-sm underline"
-        >
-          Ver credenciales de prueba
+        <button class="mobile-menu-btn" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
     </div>
+  </nav>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 py-6 px-4 text-center text-gray-600 text-sm">
-      <p>© 2024 Talk to me nicely - Protegiendo el bienestar de las familias</p>
-    </footer>
-  </div>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <div class="hero-badge">Hecho en Argentina para familias argentinas</div>
+          <h1>Comunicación <span>sin conflicto</span> para padres separados</h1>
+          <p>La app que te ayuda a coordinar la crianza de tus hijos de forma civilizada. Con inteligencia artificial que sugiere cómo mejorar tus mensajes antes de enviarlos.</p>
+          <div class="hero-cta">
+            <a href="/login.html" class="btn btn-primary btn-large">Crear cuenta gratis</a>
+            <a href="#como-funciona" class="btn btn-secondary btn-large">Ver cómo funciona</a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="phone-mockup">
+            <div class="phone-frame">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="phone-content">
+                  <div class="phone-header">
+                    <h3>📚 Escuela</h3>
+                    <p>Conversación con Juan</p>
+                  </div>
+                  <div class="phone-chat">
+                    <div class="chat-bubble received">
+                      Mañana hay reunión de padres a las 18hs. ¿Podés ir vos?
+                    </div>
+                    <div class="chat-bubble sent">
+                      Sí, yo voy. ¿Me pasás el link del meet?
+                    </div>
+                    <div class="chat-bubble ai-suggestion">
+                      <div class="ai-suggestion-header">
+                        <span>✨</span> Sugerencia de tono
+                      </div>
+                      Tu mensaje se ve bien. Tono neutral y claro. ✓
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="floating-card floating-card-1">
+            <div class="icon">✓</div>
+            <span>Mensaje enviado</span>
+          </div>
+          <div class="floating-card floating-card-2">
+            <div class="icon">👁</div>
+            <span>Visto 14:32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <script type="module">
-    import { getCurrentUser } from '/js/auth.js';
+  <!-- Problem Section -->
+  <section class="problem" id="problema">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">El problema</span>
+        <h2>La comunicación entre padres separados es difícil</h2>
+        <p>WhatsApp no está diseñado para situaciones de alto conflicto. Los mensajes se malinterpretan, las discusiones escalan, y los chicos quedan en el medio.</p>
+      </div>
+      <div class="pain-points">
+        <div class="pain-card">
+          <div class="pain-icon">😤</div>
+          <h3>Escalada de conflictos</h3>
+          <p>Un mensaje escrito en caliente puede arruinar semanas de buena comunicación. No hay nada que te frene antes de enviar.</p>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">🤷</div>
+          <h3>"No lo vi" / "No me llegó"</h3>
+          <p>Sin forma de probar quién leyó qué y cuándo. Información importante se pierde entre memes y audios.</p>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">👶</div>
+          <h3>Los chicos en el medio</h3>
+          <p>Absorben el estrés de los padres. Necesitan previsibilidad y saber que sus papás pueden coordinarse.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    function homeApp() {
-      return {
-        showDemo: false,
-        async checkAuth() {
-          try {
-            const userResult = await getCurrentUser();
-            if (userResult.success) {
-              // Usuario autenticado, redirigir al dashboard
-              window.location.href = '/dashboard.html';
-            }
-          } catch (error) {
-            // No autenticado, mostrar página de inicio
-            console.log('No autenticado, mostrando página de inicio');
+  <!-- Solution Section -->
+  <section class="solution" id="solucion">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">La solución</span>
+        <h2>Comunicación diseñada para co-parentalidad</h2>
+        <p>Hablemos Bien te da las herramientas para coordinar la crianza sin drama, con evidencia verificable y protegiendo a tus hijos.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card highlight">
+          <div class="feature-icon">🤖</div>
+          <h3>IA Coach de Tono</h3>
+          <p>Antes de enviar, la IA analiza tu mensaje y te sugiere cómo mejorarlo si detecta tono agresivo o conflictivo. Vos siempre decidís qué enviar. Es tu coach privado: el otro padre nunca ve las sugerencias.</p>
+          <span class="feature-tag">✨ Diferencial único</span>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3>Canales por tema</h3>
+          <p>Mensajes organizados: Cotidiano, Salud, Escuela, Calendario y Vacaciones. Nada se pierde, todo está donde debe estar.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✅</div>
+          <h3>Evidencia verificable</h3>
+          <p>Cada mensaje tiene timestamps de envío, entrega y primera lectura. Exportable para abogados o mediadores si lo necesitás.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>Calendario compartido</h3>
+          <p>Pickups, entregas, citas médicas, eventos escolares. Con solicitudes de cambio que requieren aprobación.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👶</div>
+          <h3>Modo Niño</h3>
+          <p>Vista simplificada para tus hijos: solo ven el calendario y los mensajes que vos autorices. Sin exposición al conflicto.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section class="how-it-works" id="como-funciona">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Cómo funciona</span>
+        <h2>Empezá en 3 simples pasos</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Creá tu familia</h3>
+          <p>Registrate y creá tu grupo familiar. Invitá al otro padre con un código seguro.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Empezá a coordinar</h3>
+          <p>Usá los canales temáticos para organizar la comunicación. La IA te ayuda a mantener el tono.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Sumá a profesionales</h3>
+          <p>Si tenés abogado o mediador, dales acceso view-only para que estén informados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Section -->
+  <section class="trust">
+    <div class="container">
+      <div class="trust-grid">
+        <div class="trust-item">
+          <div class="trust-icon">🔒</div>
+          <h4>Privacidad primero</h4>
+          <p>Cumplimos con la Ley 25.326 de datos personales</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">🇦🇷</div>
+          <h4>Hecho en Argentina</h4>
+          <p>Diseñado para familias argentinas y LATAM</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">⚖️</div>
+          <h4>Admisible legalmente</h4>
+          <p>Exports con hash de integridad para uso profesional</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">🤖</div>
+          <h4>IA responsable</h4>
+          <p>No entrenamos con tus conversaciones. Nunca.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing" id="precios">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Precios</span>
+        <h2>Simple y accesible</h2>
+        <p>Empezá gratis. Actualizá cuando necesites más.</p>
+      </div>
+      <div class="pricing-cards">
+        <div class="pricing-card">
+          <h3>Básico</h3>
+          <div class="price">Gratis</div>
+          <p class="price-note">Para siempre</p>
+          <ul class="pricing-features">
+            <li>Mensajería por canales</li>
+            <li>Calendario compartido</li>
+            <li>Timestamps verificables</li>
+            <li>5 análisis de IA por día</li>
+          </ul>
+          <a href="/login.html" class="btn btn-secondary">Empezar gratis</a>
+        </div>
+        <div class="pricing-card popular">
+          <h3>Familia</h3>
+          <div class="price">$2.990<span>/mes</span></div>
+          <p class="price-note">Por familia (ambos padres)</p>
+          <ul class="pricing-features">
+            <li>Todo lo del plan Básico</li>
+            <li>IA ilimitada</li>
+            <li>Modo Niño (hasta 3 hijos)</li>
+            <li>1 profesional con acceso</li>
+            <li>Exports PDF ilimitados</li>
+          </ul>
+          <a href="/login.html" class="btn btn-primary">Elegir plan</a>
+        </div>
+        <div class="pricing-card">
+          <h3>Profesional</h3>
+          <div class="price">$4.990<span>/mes</span></div>
+          <p class="price-note">Para estudios jurídicos</p>
+          <ul class="pricing-features">
+            <li>Todo lo del plan Familia</li>
+            <li>Hasta 5 profesionales</li>
+            <li>Panel de reportes</li>
+            <li>Soporte prioritario</li>
+            <li>Onboarding asistido</li>
+          </ul>
+          <a href="mailto:hola@hablemosbien.app" class="btn btn-secondary">Contactar ventas</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <div class="container">
+      <div class="cta-content">
+        <h2>Tus hijos merecen padres que pueden comunicarse</h2>
+        <p>Empezá hoy. Es gratis, sin tarjeta de crédito, y podés invitar al otro padre en minutos.</p>
+        <div class="cta-buttons">
+          <a href="/login.html" class="btn btn-primary btn-large">Crear cuenta gratis</a>
+          <a href="mailto:hola@hablemosbien.app" class="btn btn-secondary btn-large" style="background: transparent; border-color: rgba(255,255,255,0.3); color: white;">Contactarnos</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <div class="logo-icon">💬</div>
+            <span class="logo-text">Hablemos Bien</span>
+          </a>
+          <p>Comunicación civilizada para padres separados. Protegé a tus hijos del conflicto.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Producto</h4>
+          <ul>
+            <li><a href="#solucion">Funcionalidades</a></li>
+            <li><a href="#precios">Precios</a></li>
+            <li><a href="#como-funciona">Cómo funciona</a></li>
+            <li><a href="#">Roadmap</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Recursos</h4>
+          <ul>
+            <li><a href="#">Centro de ayuda</a></li>
+            <li><a href="#">Guía para mediadores</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">API (próximamente)</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Contacto</h4>
+          <ul>
+            <li><a href="mailto:hola@hablemosbien.app">hola@hablemosbien.app</a></li>
+            <li><a href="#">Twitter</a></li>
+            <li><a href="#">LinkedIn</a></li>
+            <li><a href="#">Instagram</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 Hablemos Bien. Hecho con 💚 en Argentina.</p>
+        <div class="footer-legal">
+          <a href="#">Términos</a>
+          <a href="#">Privacidad</a>
+          <a href="#">Cookies</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#') {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
           }
-        },
-      };
-    }
+        }
+      });
+    });
 
-    window.homeApp = homeApp;
+    // Intersection Observer for animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.pain-card, .feature-card, .step, .trust-item, .pricing-card').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+      el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      observer.observe(el);
+    });
   </script>
 </body>
 </html>
