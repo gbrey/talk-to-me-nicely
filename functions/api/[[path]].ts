@@ -106,6 +106,34 @@ export async function onRequest(context: {
       );
     }
 
+    // Verificar que las variables de entorno críticas estén presentes
+    if (!env.JWT_SECRET) {
+      console.error('JWT_SECRET is missing!');
+      return jsonResponse(
+        { error: 'Server configuration error: JWT_SECRET missing' },
+        500,
+        corsHeaders
+      );
+    }
+    
+    if (!env.ENCRYPTION_KEY) {
+      console.error('ENCRYPTION_KEY is missing!');
+      return jsonResponse(
+        { error: 'Server configuration error: ENCRYPTION_KEY missing' },
+        500,
+        corsHeaders
+      );
+    }
+    
+    if (!env.DB) {
+      console.error('DB is missing!');
+      return jsonResponse(
+        { error: 'Server configuration error: DB binding missing' },
+        500,
+        corsHeaders
+      );
+    }
+
     // Autenticación (excepto para endpoints públicos)
     const publicEndpoints = [
       'auth:register',

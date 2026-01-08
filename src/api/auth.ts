@@ -260,6 +260,9 @@ async function login(
   }
 
   // Buscar usuario
+  const emailLower = email.toLowerCase().trim();
+  console.log('Searching for user with email:', emailLower);
+  
   const user = await executeQueryFirst<{
     id: string;
     email: string;
@@ -270,29 +273,42 @@ async function login(
   }>(
     ctx.env.DB,
     'SELECT id, email, password_hash, password_salt, role, email_verified FROM users WHERE email = ?',
-    [email.toLowerCase().trim()]
+    [emailLower]
   );
 
   if (!user) {
+    console.error('User not found:', emailLower);
     return { body: { error: 'Credenciales inválidas' }, status: 401 };
   }
+  
+  console.log('User found:', { id: user.id, email: user.email, role: user.role });
 
   if (!user.password_salt) {
     return { body: { error: 'Usuario sin password configurado' }, status: 401 };
   }
 
   // Verificar password
+  console.log('Verifying password for user:', user.email);
+  console.log('Password salt exists:', !!user.password_salt);
+  console.log('Password hash exists:', !!user.password_hash);
+  
   const passwordValid = await verifyPassword(
     password,
     user.password_hash,
     user.password_salt
   );
 
+  console.log('Password validation result:', passwordValid);
+
   if (!passwordValid) {
+    console.error('Password validation failed for user:', user.email);
     return { body: { error: 'Credenciales inválidas' }, status: 401 };
   }
 
   // Generar token JWT
+  console.log('Generating JWT token...');
+  console.log('JWT_SECRET exists:', !!ctx.env.JWT_SECRET);
+  
   const token = await signJWT(
     {
       userId: user.id,
@@ -301,6 +317,8 @@ async function login(
     },
     ctx.env.JWT_SECRET
   );
+  
+  console.log('JWT token generated successfully');
 
   // Log de auditoría
   const ipAddress = getClientIP(request);
