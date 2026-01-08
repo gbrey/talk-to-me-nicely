@@ -130,3 +130,4 @@ wrangler d1 migrations apply DB --env production
 
 MIT
 
+# Cloudflare Pages deployment
