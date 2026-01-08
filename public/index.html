@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talk to me nicely - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div x-data="dashboardApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-blue-600">Talk to me nicely</h1>
+        <div class="flex items-center gap-4">
+          <span x-text="user?.email" class="text-gray-700"></span>
+          <button
+            @click="logout()"
+            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Familia Actual -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">Mi Familia</h2>
+        <div x-show="!currentFamily" class="text-gray-500">
+          <p class="mb-4">No tienes una familia activa.</p>
+          <button
+            @click="showCreateFamily = true"
+            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+          >
+            Crear Familia
+          </button>
+        </div>
+
+        <div x-show="currentFamily">
+          <h3 class="font-semibold mb-2" x-text="currentFamily?.name || 'Familia'"></h3>
+          <p class="text-sm text-gray-600 mb-4">ID: <span x-text="currentFamily?.id"></span></p>
+
+          <!-- Miembros -->
+          <div class="mb-4">
+            <h4 class="font-medium mb-2">Miembros:</h4>
+            <ul class="space-y-1">
+              <template x-for="member in currentFamily?.members" :key="member.id">
+                <li class="text-sm">
+                  <span x-text="member.email"></span>
+                  <span class="text-gray-500" x-text="' (' + member.role + ')'"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+
+          <!-- Invitación -->
+          <div class="mb-4">
+            <button
+              @click="generateInvitation()"
+              :disabled="loading"
+              class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50"
+            >
+              Generar Código de Invitación
+            </button>
+          </div>
+
+          <!-- Código de Invitación -->
+          <div x-show="invitationCode" class="bg-gray-100 p-4 rounded-md mb-4">
+            <p class="text-sm font-medium mb-2">Código de invitación:</p>
+            <p class="text-2xl font-bold text-center" x-text="invitationCode"></p>
+            <p class="text-xs text-gray-600 text-center mt-2">Válido por 48 horas</p>
+          </div>
+
+          <!-- Unirse con código -->
+          <div class="border-t pt-4">
+            <h4 class="font-medium mb-2">Unirse con código:</h4>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                x-model="joinCode"
+                placeholder="000000"
+                maxlength="6"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <button
+                @click="joinFamily()"
+                :disabled="loading"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                Unirse
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegación Rápida -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">Navegación</h2>
+        <div class="space-y-2">
+          <a
+            href="/messages.html"
+            class="block w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 text-center"
+          >
+            Mensajes
+          </a>
+          <a
+            href="/calendar.html"
+            class="block w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 text-center"
+          >
+            Calendario
+          </a>
+          <a
+            href="/child-view.html"
+            class="block w-full bg-yellow-600 text-white py-3 px-4 rounded-md hover:bg-yellow-700 text-center"
+          >
+            Vista Niño
+          </a>
+          <a
+            href="/professional.html"
+            class="block w-full bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 text-center"
+          >
+            Vista Profesional
+          </a>
+        </div>
+      </div>
+
+      <!-- Información -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">Información</h2>
+        <div class="text-sm text-gray-700 space-y-2">
+          <p><strong>Rol:</strong> <span x-text="user?.role"></span></p>
+          <p><strong>Email verificado:</strong> <span x-text="user?.emailVerified ? 'Sí' : 'No'"></span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Crear Familia -->
+    <div
+      x-show="showCreateFamily"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="showCreateFamily = false"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold mb-4">Crear Familia</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Nombre (opcional)
+            </label>
+            <input
+              type="text"
+              x-model="newFamilyName"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md"
+              placeholder="Familia García"
+            />
+          </div>
+          <div class="flex gap-2">
+            <button
+              @click="createFamily()"
+              :disabled="loading"
+              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              Crear
+            </button>
+            <button
+              @click="showCreateFamily = false"
+              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { getCurrentUser, logout as authLogout } from '/js/auth.js';
+
+    function dashboardApp() {
+      return {
+        user: null,
+        currentFamily: null,
+        invitationCode: '',
+        joinCode: '',
+        showCreateFamily: false,
+        newFamilyName: '',
+        loading: false,
+
+        async init() {
+          const userResult = await getCurrentUser();
+          if (!userResult.success) {
+            window.location.href = '/login.html';
+            return;
+          }
+          this.user = userResult.user;
+          await this.loadFamily();
+        },
+
+        async loadFamily() {
+          try {
+            const response = await api.get('family');
+            if (response.families && response.families.length > 0) {
+              const familyId = response.families[0].family_id;
+              const familyData = await api.get(`family/${familyId}`);
+              this.currentFamily = familyData.family;
+            }
+          } catch (error) {
+            console.error('Error loading family:', error);
+          }
+        },
+
+        async createFamily() {
+          this.loading = true;
+          try {
+            const response = await api.post('family', {
+              name: this.newFamilyName || null,
+            });
+            if (response.success) {
+              this.showCreateFamily = false;
+              this.newFamilyName = '';
+              await this.loadFamily();
+            }
+          } catch (error) {
+            alert('Error al crear familia: ' + error.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async generateInvitation() {
+          if (!this.currentFamily) return;
+          this.loading = true;
+          try {
+            const response = await api.post('family/invite', {
+              familyId: this.currentFamily.id,
+              role: 'parent',
+            });
+            if (response.success) {
+              this.invitationCode = response.invitation.code;
+            }
+          } catch (error) {
+            alert('Error al generar invitación: ' + error.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async joinFamily() {
+          if (!this.joinCode || this.joinCode.length !== 6) {
+            alert('Código inválido');
+            return;
+          }
+          this.loading = true;
+          try {
+            const response = await api.post('family/join', {
+              code: this.joinCode,
+            });
+            if (response.success) {
+              alert('Te has unido a la familia exitosamente');
+              this.joinCode = '';
+              await this.loadFamily();
+            }
+          } catch (error) {
+            alert('Error al unirse: ' + error.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async logout() {
+          await authLogout();
+        },
+      };
+    }
+
+    window.dashboardApp = dashboardApp;
+  </script>
+</body>
+</html>
+

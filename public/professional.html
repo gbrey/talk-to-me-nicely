@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista Profesional - Talk to me nicely</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div x-data="professionalApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-purple-600">Vista Profesional</h1>
+      <a href="/index.html" class="text-blue-600 hover:underline">← Dashboard</a>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Mensajes (Read-only) -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">Mensajes</h2>
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+          <template x-for="message in messages" :key="message.id">
+            <div class="border rounded-md p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm" x-text="message.senderEmail"></span>
+                <span class="text-xs text-gray-500" x-text="formatTime(message.sentAt)"></span>
+              </div>
+              <p class="text-sm text-gray-700" x-html="message.content"></p>
+              <p class="text-xs text-gray-500 mt-1" x-text="'Canal: ' + message.channel"></p>
+            </div>
+          </template>
+          <div x-show="messages.length === 0" class="text-center text-gray-500 py-8">
+            No hay mensajes
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendario (Read-only) -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">Calendario</h2>
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+          <template x-for="event in events" :key="event.id">
+            <div class="border rounded-md p-3">
+              <h3 class="font-semibold" x-text="event.title"></h3>
+              <p class="text-sm text-gray-600" x-text="formatDate(event.startTime)"></p>
+              <p class="text-xs text-gray-500" x-text="event.eventType"></p>
+            </div>
+          </template>
+          <div x-show="events.length === 0" class="text-center text-gray-500 py-8">
+            No hay eventos
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generar Reporte -->
+    <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold mb-4">Generar Reporte</h2>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+            <input
+              type="date"
+              x-model="reportStart"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+            <input
+              type="date"
+              x-model="reportEnd"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+            <select x-model="reportType" class="w-full px-4 py-2 border border-gray-300 rounded-md">
+              <option value="messages">Mensajes</option>
+              <option value="calendar">Calendario</option>
+            </select>
+          </div>
+        </div>
+        <button
+          @click="generateReport()"
+          :disabled="loading"
+          class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:opacity-50"
+        >
+          <span x-show="!loading">Generar Reporte</span>
+          <span x-show="loading" class="flex items-center justify-center">
+            <span class="spinner mr-2"></span>
+            Generando...
+          </span>
+        </button>
+        <div x-show="reportData" class="mt-4 p-4 bg-gray-100 rounded-md">
+          <p class="font-medium mb-2">Reporte generado:</p>
+          <pre class="text-xs overflow-auto" x-text="JSON.stringify(reportData, null, 2)"></pre>
+          <button
+            @click="downloadReport()"
+            class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Descargar JSON
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { getCurrentUser } from '/js/auth.js';
+
+    function professionalApp() {
+      return {
+        currentFamilyId: null,
+        messages: [],
+        events: [],
+        reportStart: '',
+        reportEnd: '',
+        reportType: 'messages',
+        reportData: null,
+        loading: false,
+
+        async init() {
+          const userResult = await getCurrentUser();
+          if (!userResult.success || userResult.user.role !== 'professional') {
+            window.location.href = '/login.html';
+            return;
+          }
+          await this.loadFamily();
+          await this.loadData();
+
+          // Setear fechas por defecto (último mes)
+          const end = new Date();
+          const start = new Date();
+          start.setMonth(start.getMonth() - 1);
+          this.reportEnd = end.toISOString().split('T')[0];
+          this.reportStart = start.toISOString().split('T')[0];
+        },
+
+        async loadFamily() {
+          try {
+            const response = await api.get('family');
+            if (response.families && response.families.length > 0) {
+              this.currentFamilyId = response.families[0].family_id;
+            }
+          } catch (error) {
+            console.error('Error loading family:', error);
+          }
+        },
+
+        async loadData() {
+          if (!this.currentFamilyId) return;
+
+          try {
+            // Cargar mensajes (último mes)
+            const channels = ['daily', 'health', 'school', 'calendar', 'vacation'];
+            this.messages = [];
+            for (const channel of channels) {
+              try {
+                const response = await api.get(
+                  `messages/${this.currentFamilyId}/${channel}`
+                );
+                this.messages.push(...response.messages);
+              } catch (error) {
+                console.error(`Error loading messages from ${channel}:`, error);
+              }
+            }
+            this.messages.sort((a, b) => b.sentAt - a.sentAt).slice(0, 50);
+
+            // Cargar eventos
+            const eventsResponse = await api.get(`calendar/${this.currentFamilyId}`);
+            this.events = eventsResponse.events
+              .sort((a, b) => b.startTime - a.startTime)
+              .slice(0, 20);
+          } catch (error) {
+            console.error('Error loading data:', error);
+          }
+        },
+
+        async generateReport() {
+          if (!this.reportStart || !this.reportEnd) {
+            alert('Selecciona fechas de inicio y fin');
+            return;
+          }
+
+          this.loading = true;
+          try {
+            const startTimestamp = Math.floor(
+              new Date(this.reportStart).getTime() / 1000
+            );
+            const endTimestamp = Math.floor(
+              new Date(this.reportEnd).getTime() / 1000
+            );
+
+            const response = await api.get(
+              `export/${this.currentFamilyId}/${this.reportType}?start=${startTimestamp}&end=${endTimestamp}`
+            );
+            this.reportData = response.report;
+          } catch (error) {
+            alert('Error al generar reporte: ' + error.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        downloadReport() {
+          if (!this.reportData) return;
+          const blob = new Blob([JSON.stringify(this.reportData, null, 2)], {
+            type: 'application/json',
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-${this.reportType}-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+
+        formatTime(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+
+        formatDate(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleDateString('es-AR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+      };
+    }
+
+    window.professionalApp = professionalApp;
+  </script>
+</body>
+</html>
+

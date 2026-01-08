@@ -1,0 +1,28 @@
+{
+  "name": "talk-to-me-nicely",
+  "version": "1.0.0",
+  "description": "Co-parenting app for high-conflict situations",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1=DB --r2=BUCKET",
+    "deploy": "wrangler pages deploy public",
+    "migrate": "wrangler d1 migrations apply DB"
+  },
+  "keywords": [
+    "coparenting",
+    "family",
+    "communication"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.78.0"
+  },
+  "dependencies": {
+    "@cloudflare/ai": "^1.0.0"
+  }
+}
+

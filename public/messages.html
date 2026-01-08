@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mensajes - Talk to me nicely</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div x-data="messagesApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600">Mensajes</h1>
+      <a href="/index.html" class="text-blue-600 hover:underline">← Volver al Dashboard</a>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Canales -->
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <h2 class="font-bold mb-4">Canales</h2>
+        <div class="space-y-2">
+          <template x-for="channel in channels" :key="channel.id">
+            <button
+              @click="selectChannel(channel.id)"
+              :class="selectedChannel === channel.id ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'"
+              class="w-full text-left px-4 py-2 rounded-md"
+            >
+              <div class="flex justify-between items-center">
+                <span x-text="channel.name"></span>
+                <span
+                  x-show="channel.unread > 0"
+                  class="bg-red-500 text-white text-xs rounded-full px-2 py-1"
+                  x-text="channel.unread"
+                ></span>
+              </div>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="md:col-span-3 bg-white rounded-lg shadow-md p-6 flex flex-col" style="height: 600px;">
+        <div x-show="!selectedChannel" class="text-center text-gray-500 mt-20">
+          Selecciona un canal para ver los mensajes
+        </div>
+
+        <div x-show="selectedChannel" class="flex-1 flex flex-col">
+          <!-- Mensajes -->
+          <div class="flex-1 overflow-y-auto mb-4 space-y-4" x-ref="messagesContainer">
+            <template x-for="message in messages" :key="message.id">
+              <div class="flex flex-col" :class="message.senderId === currentUserId ? 'items-end' : 'items-start'">
+                <div
+                  class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg"
+                  :class="message.senderId === currentUserId ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'"
+                >
+                  <p class="text-sm font-medium mb-1" x-text="message.senderEmail"></p>
+                  <p class="text-sm" x-html="message.content"></p>
+                  <div class="flex justify-between items-center mt-2 text-xs opacity-75">
+                    <span x-text="formatTime(message.sentAt)"></span>
+                    <span x-show="message.isRead" class="ml-2">✓✓</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Input -->
+          <div class="border-t pt-4">
+            <textarea
+              x-model="newMessage"
+              @keydown.enter.prevent="sendMessage()"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md mb-2"
+              rows="3"
+              placeholder="Escribe tu mensaje..."
+            ></textarea>
+            <div class="flex gap-2">
+              <button
+                @click="reviewTone()"
+                class="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700"
+              >
+                Revisar Tono
+              </button>
+              <button
+                @click="sendMessage()"
+                :disabled="!newMessage.trim() || loading"
+                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal IA Coach -->
+    <div
+      x-show="showToneModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="showToneModal = false"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold mb-4">Análisis de Tono</h3>
+        <div x-show="toneAnalysis" class="space-y-4">
+          <div x-show="toneAnalysis.hasIssues" class="bg-red-50 border border-red-200 rounded-md p-4">
+            <p class="font-medium text-red-800 mb-2">Se detectaron problemas:</p>
+            <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+              <template x-for="issue in toneAnalysis.issues" :key="issue">
+                <li x-text="issue"></li>
+              </template>
+            </ul>
+          </div>
+          <div x-show="!toneAnalysis.hasIssues" class="bg-green-50 border border-green-200 rounded-md p-4">
+            <p class="text-green-800">✓ El tono del mensaje es apropiado</p>
+          </div>
+          <div x-show="toneAnalysis.suggestion" class="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <p class="font-medium text-blue-800 mb-2">Sugerencia:</p>
+            <p class="text-sm text-blue-700" x-text="toneAnalysis.suggestion"></p>
+          </div>
+          <div class="flex gap-2">
+            <button
+              @click="useSuggestion()"
+              x-show="toneAnalysis.suggestion"
+              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+            >
+              Usar Sugerencia
+            </button>
+            <button
+              @click="sendOriginal()"
+              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+            >
+              Enviar Original
+            </button>
+            <button
+              @click="showToneModal = false"
+              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+        <div x-show="!toneAnalysis && !loadingTone" class="text-center text-gray-500">
+          No hay análisis disponible
+        </div>
+        <div x-show="loadingTone" class="text-center">
+          <span class="spinner"></span>
+          <p class="mt-2 text-gray-500">Analizando tono...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { getCurrentUser } from '/js/auth.js';
+
+    function messagesApp() {
+      return {
+        currentUserId: null,
+        currentFamilyId: null,
+        channels: [
+          { id: 'daily', name: 'Cotidiano', unread: 0 },
+          { id: 'health', name: 'Salud', unread: 0 },
+          { id: 'school', name: 'Escuela', unread: 0 },
+          { id: 'calendar', name: 'Calendario', unread: 0 },
+          { id: 'vacation', name: 'Vacaciones', unread: 0 },
+        ],
+        selectedChannel: null,
+        messages: [],
+        newMessage: '',
+        showToneModal: false,
+        toneAnalysis: null,
+        loading: false,
+        loadingTone: false,
+
+        async init() {
+          const userResult = await getCurrentUser();
+          if (!userResult.success) {
+            window.location.href = '/login.html';
+            return;
+          }
+          this.currentUserId = userResult.user.id;
+          // Obtener familyId del dashboard o de la primera familia
+          await this.loadFamily();
+        },
+
+        async loadFamily() {
+          try {
+            const response = await api.get('family');
+            if (response.families && response.families.length > 0) {
+              this.currentFamilyId = response.families[0].family_id;
+            }
+          } catch (error) {
+            console.error('Error loading family:', error);
+          }
+        },
+
+        async selectChannel(channelId) {
+          this.selectedChannel = channelId;
+          if (this.currentFamilyId) {
+            await this.loadMessages(channelId);
+          }
+        },
+
+        async loadMessages(channelId) {
+          try {
+            const response = await api.get(
+              `messages/${this.currentFamilyId}/${channelId}`
+            );
+            this.messages = response.messages.reverse();
+            // Marcar como leído
+            for (const msg of this.messages) {
+              if (!msg.isRead && msg.senderId !== this.currentUserId) {
+                await api.post(`messages/${msg.id}/read`);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading messages:', error);
+          }
+        },
+
+        async reviewTone() {
+          if (!this.newMessage.trim()) return;
+          this.loadingTone = true;
+          this.showToneModal = true;
+          this.toneAnalysis = null;
+
+          try {
+            const response = await api.post('ai-coach/analyze', {
+              content: this.newMessage,
+            });
+            this.toneAnalysis = response.analysis;
+          } catch (error) {
+            alert('Error al analizar tono: ' + error.message);
+          } finally {
+            this.loadingTone = false;
+          }
+        },
+
+        useSuggestion() {
+          if (this.toneAnalysis?.suggestion) {
+            this.newMessage = this.toneAnalysis.suggestion;
+          }
+          this.showToneModal = false;
+        },
+
+        async sendOriginal() {
+          this.showToneModal = false;
+          await this.sendMessage();
+        },
+
+        async sendMessage() {
+          if (!this.newMessage.trim() || !this.selectedChannel || !this.currentFamilyId) {
+            return;
+          }
+
+          this.loading = true;
+          try {
+            await api.post(`messages/${this.currentFamilyId}/${this.selectedChannel}`, {
+              content: this.newMessage,
+              shareWithChild: false,
+            });
+            this.newMessage = '';
+            await this.loadMessages(this.selectedChannel);
+          } catch (error) {
+            alert('Error al enviar mensaje: ' + error.message);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        formatTime(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+      };
+    }
+
+    window.messagesApp = messagesApp;
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista Niño - Talk to me nicely</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen">
+  <div x-data="childViewApp()" x-init="init()" class="max-w-4xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-blue-600 mb-2">👋 Hola!</h1>
+      <p class="text-lg text-gray-700">Tu calendario y mensajes</p>
+    </header>
+
+    <!-- Calendario Simplificado -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <h2 class="text-2xl font-bold mb-4 text-center">📅 Calendario</h2>
+      <div class="space-y-4">
+        <template x-for="event in childEvents" :key="event.id">
+          <div class="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+            <div class="flex items-center gap-3">
+              <div class="text-3xl">
+                <span x-show="event.eventType === 'pickup'">🚗</span>
+                <span x-show="event.eventType === 'dropoff'">🏠</span>
+                <span x-show="event.eventType === 'school'">📚</span>
+                <span x-show="event.eventType === 'vacation'">✈️</span>
+                <span x-show="!['pickup', 'dropoff', 'school', 'vacation'].includes(event.eventType)">📅</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-lg" x-text="event.title"></h3>
+                <p class="text-gray-600" x-text="formatDate(event.startTime)"></p>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="childEvents.length === 0" class="text-center text-gray-500 py-8">
+          No hay eventos próximos
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensajes Compartidos -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h2 class="text-2xl font-bold mb-4 text-center">💬 Mensajes</h2>
+      <div class="space-y-4">
+        <template x-for="message in childMessages" :key="message.id">
+          <div class="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+            <p class="font-medium mb-2" x-text="message.senderEmail"></p>
+            <p class="text-gray-700" x-html="message.content"></p>
+            <p class="text-xs text-gray-500 mt-2" x-text="formatTime(message.sentAt)"></p>
+          </div>
+        </template>
+        <div x-show="childMessages.length === 0" class="text-center text-gray-500 py-8">
+          No hay mensajes compartidos
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { getCurrentUser } from '/js/auth.js';
+
+    function childViewApp() {
+      return {
+        currentFamilyId: null,
+        childEvents: [],
+        childMessages: [],
+
+        async init() {
+          const userResult = await getCurrentUser();
+          if (!userResult.success || userResult.user.role !== 'child') {
+            window.location.href = '/login.html';
+            return;
+          }
+          await this.loadFamily();
+          await this.loadData();
+        },
+
+        async loadFamily() {
+          try {
+            const response = await api.get('family');
+            if (response.families && response.families.length > 0) {
+              this.currentFamilyId = response.families[0].family_id;
+            }
+          } catch (error) {
+            console.error('Error loading family:', error);
+          }
+        },
+
+        async loadData() {
+          if (!this.currentFamilyId) return;
+
+          try {
+            // Cargar eventos
+            const eventsResponse = await api.get(`calendar/${this.currentFamilyId}`);
+            const now = Math.floor(Date.now() / 1000);
+            this.childEvents = eventsResponse.events
+              .filter((e) => e.startTime >= now)
+              .sort((a, b) => a.startTime - b.startTime)
+              .slice(0, 5);
+
+            // Cargar mensajes compartidos
+            const channels = ['daily', 'health', 'school', 'calendar', 'vacation'];
+            this.childMessages = [];
+            for (const channel of channels) {
+              try {
+                const messagesResponse = await api.get(
+                  `messages/${this.currentFamilyId}/${channel}`
+                );
+                const shared = messagesResponse.messages.filter((m) => m.shareWithChild);
+                this.childMessages.push(...shared);
+              } catch (error) {
+                console.error(`Error loading messages from ${channel}:`, error);
+              }
+            }
+            this.childMessages.sort((a, b) => b.sentAt - a.sentAt).slice(0, 10);
+          } catch (error) {
+            console.error('Error loading data:', error);
+          }
+        },
+
+        formatDate(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleDateString('es-AR', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+
+        formatTime(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+      };
+    }
+
+    window.childViewApp = childViewApp;
+  </script>
+</body>
+</html>
+

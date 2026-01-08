@@ -1,0 +1,23 @@
+# Copiar este archivo a .dev.vars y completar con tus valores reales
+
+# Encriptación
+ENCRYPTION_KEY=clave-local-minimo-32-caracteres-aqui-12345678901234567890
+
+# JWT
+JWT_SECRET=secret-local-minimo-32-caracteres-aqui-12345678901234567890
+
+# OAuth Google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# OAuth Apple
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+
+# Cloudflare
+D1_DATABASE_ID=
+R2_BUCKET_NAME=coparenting-attachments
+R2_ACCOUNT_ID=
+
