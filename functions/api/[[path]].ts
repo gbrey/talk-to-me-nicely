@@ -64,8 +64,11 @@ export async function onRequest(context: {
     // Parsear ruta
     const route = parseRoute(path);
     if (!route) {
-      return jsonResponse({ error: 'Not found' }, 404, corsHeaders);
+      console.error('Route not found:', path);
+      return jsonResponse({ error: 'Not found', path: path.join('/') }, 404, corsHeaders);
     }
+    
+    console.log('Parsed route:', route.endpoint, 'from path:', path);
 
     // Rate limiting
     const clientIP = getClientIP(request) || 'unknown';
@@ -117,10 +120,13 @@ export async function onRequest(context: {
     // Ejecutar handler
     const handler = getHandler(route.endpoint || '');
     if (!handler) {
-      return jsonResponse({ error: 'Handler not found' }, 404, corsHeaders);
+      console.error('Handler not found for endpoint:', route.endpoint);
+      return jsonResponse({ error: 'Handler not found', endpoint: route.endpoint }, 404, corsHeaders);
     }
 
+    console.log('Calling handler for:', route.endpoint);
     const response = await handler(request, ctx, { ...route.params, endpoint: route.endpoint });
+    console.log('Handler response:', response.status);
 
     // Agregar headers de rate limit
     const responseHeaders = {
@@ -163,8 +169,14 @@ export async function onRequest(context: {
     });
   } catch (error) {
     console.error('API Error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error details:', { message: errorMessage, stack: errorStack });
     return jsonResponse(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        message: errorMessage,
+      },
       500,
       corsHeaders
     );
@@ -182,17 +194,15 @@ function parseRoute(path: string[]): {
 
   const [resource, ...rest] = path;
 
-  // Seed endpoint removido - solo disponible en desarrollo local
-
-    // Auth endpoints
-    if (resource === 'auth') {
-      if (rest.length === 0) return null;
-      const action = rest[0];
-      return {
-        endpoint: `auth:${action}`,
-        params: {},
-      };
-    }
+  // Auth endpoints
+  if (resource === 'auth') {
+    if (rest.length === 0) return null;
+    const action = rest[0];
+    return {
+      endpoint: `auth:${action}`,
+      params: {},
+    };
+  }
 
   // Family endpoints
   if (resource === 'family') {

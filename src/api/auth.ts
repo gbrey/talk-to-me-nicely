@@ -54,6 +54,7 @@ export async function handle(
   const action = endpoint.split(':')[1] || '';
 
   try {
+    console.log('Auth handler called:', { action, method, endpoint });
     switch (action) {
       case 'register':
         if (method === 'POST') {
@@ -95,7 +96,16 @@ export async function handle(
     return { body: { error: 'Method not allowed' }, status: 405 };
   } catch (error) {
     console.error('Auth error:', error);
-    return { body: { error: 'Internal server error' }, status: 500 };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Auth error details:', { message: errorMessage, stack: errorStack });
+    return { 
+      body: { 
+        error: 'Internal server error',
+        message: errorMessage,
+      }, 
+      status: 500 
+    };
   }
 }
 
@@ -106,8 +116,10 @@ async function register(
   request: Request,
   ctx: Context
 ): Promise<{ body: unknown; status: number }> {
-  const body = await request.json();
-  const { email, password, role = 'parent' } = body;
+  try {
+    const body = await request.json();
+    const { email, password, role = 'parent' } = body;
+    console.log('Register attempt:', { email: email?.substring(0, 5) + '...', role });
 
   // Validaciones
   if (!email || !isValidEmail(email)) {
@@ -204,6 +216,17 @@ async function register(
     },
     status: 201,
   };
+  } catch (error) {
+    console.error('Register function error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { 
+      body: { 
+        error: 'Error al procesar registro',
+        message: errorMessage 
+      }, 
+      status: 500 
+    };
+  }
 }
 
 /**
@@ -213,8 +236,10 @@ async function login(
   request: Request,
   ctx: Context
 ): Promise<{ body: unknown; status: number }> {
-  const body = await request.json();
-  const { email, password } = body;
+  try {
+    const body = await request.json();
+    const { email, password } = body;
+    console.log('Login attempt:', { email: email?.substring(0, 5) + '...' });
 
   if (!email || !password) {
     return { body: { error: 'Email y password requeridos' }, status: 400 };
@@ -288,6 +313,17 @@ async function login(
     },
     status: 200,
   };
+  } catch (error) {
+    console.error('Login function error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { 
+      body: { 
+        error: 'Error al procesar login',
+        message: errorMessage 
+      }, 
+      status: 500 
+    };
+  }
 }
 
 /**
