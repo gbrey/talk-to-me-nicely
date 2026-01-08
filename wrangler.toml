@@ -2,19 +2,32 @@ name = "talk-to-me-nicely"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "public"
 
-[env.production]
-name = "talk-to-me-nicely"
-
+# Base de datos local (desarrollo)
 [[d1_databases]]
 binding = "DB"
 database_name = "coparenting-db"
 database_id = "565f55aa-bac1-4de2-a9ac-55023cbc1925"
 preview_database_id = "565f55aa-bac1-4de2-a9ac-55023cbc1925"
 
+# Configuración de producción
+[env.production]
+name = "talk-to-me-nicely"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "coparenting-db-prod"
+database_id = "49b7eeba-6a24-41b8-82d5-e44be4e67098"
+
+# R2 buckets para desarrollo local
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "coparenting-attachments"
 preview_bucket_name = "coparenting-attachments-preview"
+
+# R2 buckets para producción
+[[env.production.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "coparenting-attachments"
 
 [build]
 command = ""
