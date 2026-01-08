@@ -1,0 +1,9 @@
+Variables de Entorno para Cloudflare Pages
+
+Copia y pega estas variables en Settings > Environment Variables > Production:
+
+ENCRYPTION_KEY=a425a7d36012273685ae23311df9dea8c472692fa56f5a35ced6ca25283b0a4a
+JWT_SECRET=91ff48a699b0c89a1cad8cfa4672bb45f604e32ff353afaaf8247748b6cb9e26
+D1_DATABASE_ID=49b7eeba-6a24-41b8-82d5-e44be4e67098
+R2_BUCKET_NAME=coparenting-attachments
+R2_ACCOUNT_ID=abcce3a933dd0f7acbb57599fae04842

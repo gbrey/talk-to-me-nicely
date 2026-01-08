@@ -98,7 +98,6 @@ export async function onRequest(context: {
       'auth:login',
       'auth:oauth',
       'auth:verify-email',
-      'seed:run', // Solo para desarrollo
     ];
     let ctx: Context = { env };
 
@@ -172,10 +171,7 @@ function parseRoute(path: string[]): {
 
   const [resource, ...rest] = path;
 
-    // Seed endpoint (público para desarrollo)
-    if (resource === 'seed') {
-      return { endpoint: 'seed:run', params: {} };
-    }
+  // Seed endpoint removido - solo disponible en desarrollo local
 
     // Auth endpoints
     if (resource === 'auth') {
@@ -334,17 +330,6 @@ function getHandler(
       return professionalHandler.handle as any;
     case 'export':
       return exportHandler.handle as any;
-    case 'seed':
-      // Importar dinámicamente el handler de seed
-      return async (request: Request, ctx: Context, params: Record<string, string>) => {
-        const { seedDatabase } = await import('../../../scripts/seed');
-        try {
-          await seedDatabase(ctx.env.DB);
-          return { body: { success: true, message: 'Seed completado' }, status: 200 };
-        } catch (error: any) {
-          return { body: { success: false, error: error.message }, status: 500 };
-        }
-      };
     default:
       return null;
   }
