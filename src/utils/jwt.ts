@@ -144,13 +144,15 @@ export function getJWTFromCookie(cookieHeader: string | null): string | null {
  */
 export function createJWTCookie(token: string, maxAgeDays: number = 7): string {
   const maxAge = maxAgeDays * 24 * 60 * 60;
-  return `jwt=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
+  // SameSite=Lax permite que la cookie se envíe en requests cross-site de nivel superior (navegación)
+  // pero no en sub-requests (como imágenes o iframes)
+  return `jwt=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
 }
 
 /**
  * Crea una cookie para eliminar el JWT
  */
 export function createDeleteJWTCookie(): string {
-  return 'jwt=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0';
+  return 'jwt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
 }
 

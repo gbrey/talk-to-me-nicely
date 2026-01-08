@@ -48,12 +48,23 @@ export async function onRequest(context: {
   const path = params.path || [];
   const method = request.method;
 
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+  // CORS headers - permitir credenciales (cookies)
+  // Cuando usamos credentials, no podemos usar '*' en Allow-Origin
+  const origin = request.headers.get('Origin');
+  const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
   };
+  
+  // Si hay origen, usarlo; si no, permitir cualquier origen (sin credentials)
+  if (origin) {
+    corsHeaders['Access-Control-Allow-Origin'] = origin;
+  } else {
+    corsHeaders['Access-Control-Allow-Origin'] = '*';
+    // Si no hay origen, no podemos usar credentials
+    delete corsHeaders['Access-Control-Allow-Credentials'];
+  }
 
   // Manejar OPTIONS para CORS
   if (method === 'OPTIONS') {
