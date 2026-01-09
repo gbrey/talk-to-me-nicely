@@ -26,8 +26,17 @@ async function apiRequest(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}/${endpoint}`, config);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    const error = new Error(errorData.error || `HTTP ${response.status}`);
+    // Preservar datos adicionales del error (como validation) en el objeto error
+    if (errorData.validation) {
+      error.validation = errorData.validation;
+    }
+    if (errorData.error) {
+      error.error = errorData.error;
+    }
+    error.response = response; // Preservar response para acceso adicional
+    throw error;
   }
 
   return await response.json();

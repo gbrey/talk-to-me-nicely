@@ -48,23 +48,29 @@
       flex-direction: column;
       height: 70vh;
       min-height: 600px;
+      overflow: hidden;
     }
     
     .chat-header {
       padding-bottom: 16px;
       border-bottom: 2px solid var(--color-border);
       margin-bottom: 16px;
+      flex-shrink: 0;
     }
     
     .messages-list {
       flex: 1;
       overflow-y: auto;
-      padding-right: 8px;
+      overflow-x: hidden;
+      padding: 0 8px 0 0;
+      min-height: 0;
     }
     
     .message-date-separator {
       text-align: center;
       margin: 16px 0;
+      width: 100%;
+      padding: 0 8px;
     }
     
     .date-badge {
@@ -79,6 +85,8 @@
     .message-input-area {
       border-top: 2px solid var(--color-border);
       padding-top: 16px;
+      flex-shrink: 0;
+      overflow: hidden;
     }
     
     .tone-button {
@@ -88,6 +96,88 @@
     
     .tone-button:hover {
       background: var(--color-terracotta-light);
+    }
+    
+    /* Asegurar contraste en mensajes enviados */
+    .chat-bubble.sent {
+      background: var(--color-sage-dark) !important;
+    }
+    
+    .chat-bubble.sent p,
+    .chat-bubble.sent span,
+    .chat-bubble.sent div {
+      color: white !important;
+    }
+    
+    .chat-bubble.sent .flex {
+      color: white !important;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    /* Reacción estilo WhatsApp para compartir con niño */
+    .child-reaction-button {
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(6px);
+    }
+    
+    .child-reaction-button.inactive {
+      background: rgba(0, 0, 0, 0.25);
+      opacity: 0.4;
+    }
+    
+    .child-reaction-button.inactive:hover {
+      background: rgba(0, 0, 0, 0.35);
+      opacity: 0.7;
+      transform: scale(1.15);
+    }
+    
+    .child-reaction-button.active {
+      background: rgba(255, 255, 255, 0.4);
+      opacity: 1;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .child-reaction-button.active:hover {
+      background: rgba(255, 255, 255, 0.5);
+      transform: scale(1.15);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .child-reaction-display {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(6px);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     
     @media (max-width: 768px) {
@@ -110,6 +200,7 @@
       return {
         currentUserId: null,
         currentFamilyId: null,
+        currentUserEmail: null,
         channels: [
           { id: 'daily', name: 'Cotidiano', icon: '💬', color: 'blue' },
           { id: 'health', name: 'Salud', icon: '🏥', color: 'red' },
@@ -128,6 +219,9 @@
         error: null,
         success: null,
         userRole: null,
+        pendingMessage: null, // Mensaje pendiente de validación
+        toneStatus: null, // 'validating', 'approved', 'rejected'
+        validationResult: null, // Resultado de la validación de IA
 
         async init() {
           const userResult = await getCurrentUser();
@@ -136,6 +230,7 @@
             return;
           }
           this.currentUserId = userResult.user.id;
+          this.currentUserEmail = userResult.user.email;
           this.userRole = userResult.user.role;
           await this.loadFamily();
           // Auto-seleccionar el primer canal si hay familia
@@ -186,40 +281,126 @@
 
         async sendMessage() {
           if (!this.newMessage.trim() || !this.currentFamilyId || !this.selectedChannel) return;
+          if (this.loading || this.loadingTone) return;
+          
+          const messageContent = this.newMessage.trim();
+          const messageShareWithChild = this.shareWithChild;
           
           // Solo aplicar revisión automática de tono para padres
           if (this.userRole === 'parent') {
+            // Guardar mensaje pendiente y mostrar en el chat
+            this.pendingMessage = {
+              content: messageContent,
+              shareWithChild: messageShareWithChild,
+              timestamp: Math.floor(Date.now() / 1000),
+              isPending: true
+            };
+            this.toneStatus = 'validating';
             this.loadingTone = true;
             this.error = null;
             this.success = null;
+            this.validationResult = null;
             
-            // Simular proceso de validación de 2 segundos
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Limpiar el input inmediatamente para mejor UX
+            this.newMessage = '';
+            this.shareWithChild = false;
             
-            // 50% de probabilidad de rechazar el mensaje
-            const shouldReject = Math.random() < 0.5;
+            // Auto-scroll para mostrar el mensaje pendiente
+            this.$nextTick(() => {
+              const container = this.$refs.messagesContainer;
+              if (container) {
+                container.scrollTop = container.scrollHeight;
+              }
+            });
             
-            if (shouldReject) {
+            // Validar con IA antes de enviar
+            try {
+              const validationResponse = await api.post('ai-coach/analyze', {
+                content: messageContent,
+              });
+              
+              const analysis = validationResponse.analysis || validationResponse;
+              
+              // Verificar si hay problemas o borrachera detectada
+              if (analysis.hasIssues || analysis.isDrunk) {
+                this.toneStatus = 'rejected';
+                this.loadingTone = false;
+                this.validationResult = analysis;
+                // Restaurar el mensaje al input
+                this.newMessage = messageContent;
+                this.shareWithChild = messageShareWithChild;
+                
+                // Construir mensaje de error con detalles
+                let errorMsg = 'El mensaje no cumple con los estándares de comunicación apropiada.';
+                if (analysis.isDrunk) {
+                  errorMsg += ' Se detectaron indicios de que podrías estar bajo la influencia del alcohol.';
+                }
+                if (analysis.issues && analysis.issues.length > 0) {
+                  errorMsg += ' Problemas detectados: ' + analysis.issues.join(', ');
+                }
+                this.error = errorMsg;
+                
+                // Remover mensaje pendiente después de mostrar el error
+                setTimeout(() => {
+                  this.pendingMessage = null;
+                  this.toneStatus = null;
+                }, 3000);
+                return;
+              }
+              
+              // Mensaje aprobado - continuar con el envío
+              this.toneStatus = 'approved';
               this.loadingTone = false;
-              this.error = 'El tono del mensaje no es apropiado. Por favor, escribe de manera más amable y respetuosa antes de enviar.';
-              return;
+            } catch (validationError) {
+              console.error('Error validating message:', validationError);
+              // Si falla la validación, permitir el envío pero registrar el error
+              this.toneStatus = 'approved';
+              this.loadingTone = false;
             }
-            
-            this.loadingTone = false;
-            this.success = 'Tono aprobado ✓';
-            setTimeout(() => this.success = null, 2000);
           }
           
           this.loading = true;
           this.error = null;
           try {
             const response = await api.post(`messages/${this.currentFamilyId}/${this.selectedChannel}`, {
-              content: this.newMessage,
-              shareWithChild: this.shareWithChild,
+              content: messageContent,
+              shareWithChild: messageShareWithChild,
             });
+            
+            // Verificar si el backend rechazó por validación
+            if (response.error && response.validation) {
+              this.toneStatus = 'rejected';
+              this.validationResult = response.validation;
+              this.loadingTone = false;
+              // Restaurar el mensaje al input
+              this.newMessage = messageContent;
+              this.shareWithChild = messageShareWithChild;
+              
+              let errorMsg = response.error;
+              if (response.validation.isDrunk) {
+                errorMsg += ' Se detectaron indicios de que podrías estar bajo la influencia del alcohol.';
+              }
+              if (response.validation.issues && response.validation.issues.length > 0) {
+                errorMsg += ' Problemas: ' + response.validation.issues.join(', ');
+              }
+              this.error = errorMsg;
+              
+              // Remover mensaje pendiente
+              setTimeout(() => {
+                this.pendingMessage = null;
+                this.toneStatus = null;
+              }, 3000);
+              return;
+            }
+            
             if (response.success) {
-              this.newMessage = '';
-              this.shareWithChild = false; // Resetear después de enviar
+              // Limpiar mensaje pendiente y validación
+              this.pendingMessage = null;
+              this.toneStatus = null;
+              this.loadingTone = false;
+              this.validationResult = null;
+              // Asegurar que shareWithChild se resetee
+              this.shareWithChild = false;
               await this.loadMessages(this.selectedChannel);
               // Auto-scroll al final
               this.$nextTick(() => {
@@ -230,7 +411,40 @@
               });
             }
           } catch (error) {
+            // Manejar errores de validación del backend
+            if (error.validation) {
+              this.toneStatus = 'rejected';
+              this.validationResult = error.validation;
+              this.loadingTone = false;
+              // Restaurar el mensaje al input
+              this.newMessage = messageContent;
+              this.shareWithChild = messageShareWithChild;
+              
+              let errorMsg = error.error || error.message || 'El mensaje no cumple con los estándares de comunicación apropiada.';
+              if (error.validation.isDrunk) {
+                errorMsg += ' Se detectaron indicios de que podrías estar bajo la influencia del alcohol.';
+              }
+              if (error.validation.issues && error.validation.issues.length > 0) {
+                errorMsg += ' Problemas: ' + error.validation.issues.join(', ');
+              }
+              this.error = errorMsg;
+              
+              // Remover mensaje pendiente después de mostrar el error
+              setTimeout(() => {
+                this.pendingMessage = null;
+                this.toneStatus = null;
+              }, 3000);
+              return;
+            }
+            
             this.error = 'Error al enviar mensaje: ' + (error.message || 'Error desconocido');
+            this.pendingMessage = null;
+            this.toneStatus = null;
+            this.loadingTone = false;
+            this.validationResult = null;
+            // Restaurar mensaje al input en caso de error
+            this.newMessage = messageContent;
+            this.shareWithChild = messageShareWithChild;
           } finally {
             this.loading = false;
           }
@@ -329,6 +543,42 @@
           
           return currentDate.toDateString() !== previousDate.toDateString();
         },
+
+        async toggleShareWithChild(messageId) {
+          if (!this.currentFamilyId || !this.selectedChannel) return;
+          
+          try {
+            const message = this.messages.find(m => m.id === messageId);
+            if (!message) return;
+            
+            const currentShareState = message.shareWithChild || message.share_with_child;
+            const newShareState = !currentShareState;
+            
+            // Actualizar localmente primero para mejor UX
+            if (message.shareWithChild !== undefined) {
+              message.shareWithChild = newShareState;
+            } else {
+              message.share_with_child = newShareState;
+            }
+            
+            // Llamar al API para actualizar en el servidor
+            try {
+              await api.patch(`messages/${this.currentFamilyId}/${this.selectedChannel}/${messageId}`, {
+                shareWithChild: newShareState,
+              });
+            } catch (error) {
+              // Revertir si falla
+              if (message.shareWithChild !== undefined) {
+                message.shareWithChild = currentShareState;
+              } else {
+                message.share_with_child = currentShareState;
+              }
+              console.error('Error al actualizar compartir con niño:', error);
+            }
+          } catch (error) {
+            console.error('Error al alternar compartir con niño:', error);
+          }
+        },
       };
     };
   </script>
@@ -350,12 +600,9 @@
       </div>
     </header>
 
-    <!-- Alertas -->
-    <div x-show="error" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer;">
-      <p x-text="error"></p>
-    </div>
-    <div x-show="success" x-cloak class="alert alert-success mb-4" @click="success = null" style="cursor: pointer;">
-      <p x-text="success"></p>
+    <!-- Alertas (solo para errores generales, no de validación de tono) -->
+    <div x-show="error && !loadingTone && !pendingMessage && toneStatus !== 'rejected'" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer; animation: fadeIn 0.3s ease;">
+      <p style="font-weight: 500;" x-text="error"></p>
     </div>
 
     <div class="messages-layout">
@@ -387,7 +634,7 @@
           </div>
         </div>
 
-        <div x-show="selectedChannel" class="flex-1 flex flex-col">
+        <div x-show="selectedChannel" class="flex-1 flex flex-col" style="min-height: 0; overflow: hidden;">
           <!-- Header del Canal -->
           <div class="chat-header">
             <div class="flex items-center gap-3">
@@ -400,7 +647,7 @@
           </div>
 
           <!-- Mensajes -->
-          <div class="messages-list custom-scrollbar" x-ref="messagesContainer">
+          <div class="messages-list custom-scrollbar" x-ref="messagesContainer" style="overflow-y: auto; overflow-x: hidden;">
             <template x-for="(message, index) in messages" :key="message.id">
               <div>
                 <!-- Separador de fecha -->
@@ -409,28 +656,109 @@
                 </div>
                 
                 <!-- Mensaje -->
-                <div class="flex flex-col" :class="(message.senderId || message.sender_id) === currentUserId ? 'items-end' : 'items-start'" style="margin-bottom: 16px;">
+                <div class="flex flex-col" :class="(message.senderId || message.sender_id) === currentUserId ? 'items-end' : 'items-start'" style="margin-bottom: 16px; width: 100%; padding: 0 8px;">
                   <div
                     class="chat-bubble"
                     :class="(message.senderId || message.sender_id) === currentUserId ? 'sent' : 'received'"
-                    style="max-width: 70%;"
+                    style="max-width: 70%; min-width: 0; word-wrap: break-word;"
                   >
-                    <p style="font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; opacity: 0.8;" x-text="message.senderEmail || message.sender_email"></p>
-                    <p style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word;" x-html="message.content"></p>
-                    <div class="flex justify-between items-center gap-2 mt-2">
-                      <div x-show="message.shareWithChild || message.share_with_child" class="flex items-center gap-1" style="font-size: 0.7rem; opacity: 0.8;">
-                        <span>👶</span>
-                        <span>Compartido con niño</span>
-                      </div>
-                      <div class="flex justify-end items-center gap-2" style="font-size: 0.75rem; opacity: 0.7;">
+                    <p 
+                      :style="(message.senderId || message.sender_id) === currentUserId ? 'font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.9);' : 'font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--color-text-light);'"
+                      x-text="message.senderEmail || message.sender_email"
+                    ></p>
+                    <p 
+                      :style="(message.senderId || message.sender_id) === currentUserId ? 'font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; color: white;' : 'font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; color: var(--color-text);'"
+                      x-html="message.content"
+                    ></p>
+                    <div class="flex justify-between items-end gap-2 mt-2" style="position: relative;">
+                      <div 
+                        class="flex justify-end items-center gap-2" 
+                        :style="(message.senderId || message.sender_id) === currentUserId ? 'font-size: 0.75rem; color: rgba(255,255,255,0.8);' : 'font-size: 0.75rem; color: var(--color-text-light);'"
+                        style="margin-left: auto;"
+                      >
                         <span x-text="formatTime(message.sentAt || message.sent_at)"></span>
                         <span x-show="message.isRead || message.read_at">✓✓</span>
+                      </div>
+                      <!-- Reacción estilo WhatsApp (esquina inferior derecha) -->
+                      <div style="position: absolute; bottom: -2px; right: -2px; display: flex; align-items: center; gap: 2px;">
+                        <!-- Reacción 👶 (solo visible cuando está activa o cuando el padre puede cambiarla) -->
+                        <button
+                          x-show="userRole === 'parent' && (message.senderId || message.sender_id) === currentUserId"
+                          @click="toggleShareWithChild(message.id)"
+                          type="button"
+                          class="child-reaction-button"
+                          :class="(message.shareWithChild || message.share_with_child) ? 'active' : 'inactive'"
+                          :style="(message.senderId || message.sender_id) === currentUserId ? '' : ''"
+                          title="Compartir con niño"
+                        >
+                          <span style="font-size: 0.8rem; line-height: 1;">👶</span>
+                        </button>
+                        <!-- Reacción visible cuando está compartido (para otros usuarios) -->
+                        <div 
+                          x-show="(message.shareWithChild || message.share_with_child) && !(userRole === 'parent' && (message.senderId || message.sender_id) === currentUserId)" 
+                          class="child-reaction-display"
+                        >
+                          <span style="font-size: 0.8rem; line-height: 1;">👶</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </template>
+            
+            <!-- Mensaje pendiente de validación (estilo WhatsApp) -->
+            <div x-show="pendingMessage && toneStatus === 'validating'" style="margin-bottom: 16px; width: 100%; padding: 0 8px;">
+              <div class="flex flex-col items-end" style="width: 100%;">
+                <div class="chat-bubble sent" style="max-width: 70%; min-width: 0; opacity: 0.8; word-wrap: break-word;">
+                  <p style="font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.9);" x-text="currentUserEmail || 'Tú'"></p>
+                  <p style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; color: white;" x-text="pendingMessage?.content || ''"></p>
+                  <div class="flex justify-between items-end gap-2 mt-2" style="position: relative;">
+                    <div class="flex justify-end items-center gap-2" style="font-size: 0.75rem; color: rgba(255,255,255,0.9); margin-left: auto;">
+                      <div class="spinner" style="width: 12px; height: 12px; border-top-color: white; border-width: 2px;"></div>
+                      <span>Validando...</span>
+                    </div>
+                    <!-- Reacción 👶 en mensaje pendiente -->
+                    <div x-show="pendingMessage?.shareWithChild" style="position: absolute; bottom: -2px; right: -2px;">
+                      <div class="child-reaction-display">
+                        <span style="font-size: 0.8rem; line-height: 1;">👶</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Mensaje rechazado (breve feedback visual) -->
+            <div x-show="pendingMessage && toneStatus === 'rejected'" style="margin-bottom: 16px; animation: shake 0.5s; width: 100%; padding: 0 8px;">
+              <div class="flex flex-col items-end" style="width: 100%;">
+                <div class="chat-bubble" style="max-width: 70%; min-width: 0; background: rgba(196, 120, 94, 0.15); border: 2px solid var(--color-terracotta); word-wrap: break-word;">
+                  <p style="font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--color-terracotta);" x-text="currentUserEmail || 'Tú'"></p>
+                  <p style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; color: var(--color-text);" x-text="pendingMessage?.content || ''"></p>
+                  <div class="flex justify-end items-center gap-2 mt-2" style="font-size: 0.75rem; color: var(--color-terracotta); font-weight: 600;">
+                    <span x-show="validationResult && validationResult.isDrunk">🍺</span>
+                    <span>⚠️</span>
+                    <span>Rechazado</span>
+                  </div>
+                </div>
+                <!-- Sugerencias de mejora -->
+                <div x-show="validationResult && validationResult.suggestion" class="card card-compact mt-2" style="max-width: 70%; background: var(--color-cream); border: 2px solid var(--color-sage);">
+                  <div style="font-size: 0.85rem;">
+                    <p style="font-weight: 600; margin-bottom: 8px; color: var(--color-sage-dark);">
+                      💡 Sugerencia de mejora:
+                    </p>
+                    <p style="white-space: pre-wrap; word-break: break-word; color: var(--color-text); margin-bottom: 8px;" x-text="validationResult.suggestion"></p>
+                    <button 
+                      @click="newMessage = validationResult.suggestion; validationResult = null; pendingMessage = null; toneStatus = null;"
+                      class="btn btn-primary"
+                      style="width: 100%; padding: 8px; font-size: 0.85rem;"
+                    >
+                      Usar esta sugerencia
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <div x-show="loading" class="text-center" style="padding: 16px; color: var(--color-text-light);">
               <p>Cargando mensajes...</p>
@@ -445,46 +773,58 @@
 
           <!-- Input -->
           <div class="message-input-area">
-            <textarea
-              x-model="newMessage"
-              @keydown.enter.ctrl="sendMessage()"
-              @keydown.enter.shift.exact.prevent
-              rows="3"
-              placeholder="Escribe tu mensaje... (Ctrl+Enter para enviar, Shift+Enter para nueva línea)"
-              style="resize: none;"
-            ></textarea>
-            
-            <!-- Opción para compartir con niño (solo para padres) -->
-            <div x-show="userRole === 'parent'" class="flex items-center gap-2 mt-2">
-              <input
-                type="checkbox"
-                id="shareWithChild"
-                x-model="shareWithChild"
-                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label for="shareWithChild" class="text-sm text-gray-700 cursor-pointer flex items-center gap-2">
-                <span>👶</span>
-                <span>Compartir este mensaje con el niño</span>
-              </label>
+            <!-- Mensaje de error inline (solo si hay error y no hay validación de tono en curso) -->
+            <div x-show="error && !loadingTone && !pendingMessage && toneStatus !== 'rejected'" class="alert alert-error mb-3" style="padding: 10px 12px; font-size: 0.85rem; animation: fadeIn 0.3s ease;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span x-show="validationResult && validationResult.isDrunk">🍺</span>
+                <span>⚠️</span>
+                <p style="margin: 0; flex: 1;" x-text="error"></p>
+              </div>
+              <!-- Mostrar sugerencia si está disponible -->
+              <div x-show="validationResult && validationResult.suggestion" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(196, 120, 94, 0.3);">
+                <p style="font-weight: 600; margin-bottom: 4px; font-size: 0.8rem;">Sugerencia:</p>
+                <p style="font-size: 0.8rem; white-space: pre-wrap; margin-bottom: 8px;" x-text="validationResult.suggestion"></p>
+                <button 
+                  @click="newMessage = validationResult.suggestion; validationResult = null; error = null;"
+                  class="btn btn-primary"
+                  style="width: 100%; padding: 6px; font-size: 0.8rem;"
+                >
+                  Usar esta sugerencia
+                </button>
+              </div>
             </div>
             
-            <div class="flex gap-2 mt-3">
-              <button
-                @click="reviewTone()"
-                :disabled="!newMessage.trim() || loadingTone"
-                class="btn tone-button"
-              >
-                <span>🤖</span>
-                <span>Revisar Tono</span>
-              </button>
-              <button
-                @click="sendMessage()"
-                :disabled="!newMessage.trim() || loading"
-                class="btn btn-primary"
-                style="flex: 1; justify-content: center;"
-              >
-                Enviar
-              </button>
+            <!-- Contenedor estilo WhatsApp -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex: 1; display: flex; align-items: center; background: #F0F2F5; border: none; border-radius: 21px; padding: 4px 4px 4px 12px; min-height: 42px;">
+                <textarea
+                  x-model="newMessage"
+                  @keydown.enter.ctrl="sendMessage()"
+                  @keydown.enter.shift.exact.prevent
+                  rows="1"
+                  placeholder="Escribe tu mensaje..."
+                  style="resize: none; border: none; outline: none; flex: 1; min-height: 34px; max-height: 120px; font-size: 0.9375rem; font-family: var(--font-body); padding: 8px 0; line-height: 1.33; background: transparent; color: var(--color-text);"
+                  :disabled="loadingTone || loading"
+                  @input="$event.target.style.height = 'auto'; $event.target.style.height = Math.min($event.target.scrollHeight, 120) + 'px';"
+                ></textarea>
+                
+                <!-- Botón de enviar estilo WhatsApp - solo se muestra cuando hay texto -->
+                <button
+                  x-show="newMessage.trim() || loadingTone || loading"
+                  @click="sendMessage()"
+                  :disabled="!newMessage.trim() || loading || loadingTone"
+                  type="button"
+                  style="border: none; padding: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0;"
+                  :style="(!newMessage.trim() || loading || loadingTone) ? 'background: transparent; cursor: not-allowed;' : 'background: var(--color-sage-dark);'"
+                >
+                  <!-- Ícono de triángulo estilo WhatsApp (cuando hay texto) -->
+                  <svg x-show="!loading && !loadingTone && newMessage.trim()" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left: 1px;">
+                    <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" fill="white"/>
+                  </svg>
+                  <div x-show="loadingTone" class="spinner" style="width: 16px; height: 16px; border-top-color: white; border-width: 2px;"></div>
+                  <div x-show="loading && !loadingTone" class="spinner" style="width: 16px; height: 16px; border-top-color: white; border-width: 2px;"></div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -507,34 +847,34 @@
         </div>
         
         <div x-show="toneAnalysis">
-          <div x-show="toneAnalysis.hasIssues" class="alert alert-error mb-4">
+          <div x-show="toneAnalysis?.hasIssues" class="alert alert-error mb-4">
             <p style="font-weight: 600; margin-bottom: 8px;" class="flex items-center gap-2">
               <span>⚠️</span>
               <span>Se detectaron problemas:</span>
             </p>
             <ul style="list-style: disc; list-position: inside; font-size: 0.9rem; padding-left: 8px;">
-              <template x-for="issue in toneAnalysis.issues" :key="issue">
+              <template x-for="issue in (toneAnalysis?.issues || [])" :key="issue">
                 <li x-text="issue" style="margin-bottom: 4px;"></li>
               </template>
             </ul>
           </div>
           
-          <div x-show="!toneAnalysis.hasIssues" class="alert alert-success mb-4">
+          <div x-show="toneAnalysis && !toneAnalysis.hasIssues" class="alert alert-success mb-4">
             <p style="font-weight: 600;" class="flex items-center gap-2">
               <span>✓</span>
               <span>El tono del mensaje es apropiado</span>
             </p>
           </div>
           
-          <div x-show="toneAnalysis.suggestion" class="alert alert-info mb-4">
+          <div x-show="toneAnalysis?.suggestion" class="alert alert-info mb-4">
             <p style="font-weight: 600; margin-bottom: 8px;">💡 Sugerencia:</p>
-            <p style="font-size: 0.9rem; white-space: pre-wrap;" x-text="toneAnalysis.suggestion"></p>
+            <p style="font-size: 0.9rem; white-space: pre-wrap;" x-text="toneAnalysis?.suggestion || ''"></p>
           </div>
           
           <div class="flex gap-3">
             <button
               @click="useSuggestion()"
-              x-show="toneAnalysis.suggestion"
+              x-show="toneAnalysis?.suggestion"
               class="btn btn-primary"
               style="flex: 1; justify-content: center;"
             >

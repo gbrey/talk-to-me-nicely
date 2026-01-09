@@ -7,11 +7,13 @@ import { executeQuery, executeQueryFirst, executeMutation } from '~/utils/db';
 import { isValidChannel, sanitizeHTML } from '~/utils/validation';
 import { getCurrentTimestamp, generateContentHash } from '~/utils/timestamps';
 import { logAudit, getClientIP, getUserAgent } from '~/utils/audit';
+import { validateMessageTone } from '~/api/ai-coach';
 
 interface Context {
   env: {
     DB: D1Database;
     BUCKET: R2Bucket;
+    AI?: any; // Cloudflare Workers AI binding
   };
   userId?: string;
   userRole?: string;
@@ -44,6 +46,10 @@ export async function handle(
     
     if (method === 'POST' && params.id && endpoint.includes('read')) {
       return await markAsRead(request, ctx, params.id);
+    }
+    
+    if (method === 'PATCH' && params.familyId && params.channel && params.id) {
+      return await updateMessage(request, ctx, params.familyId, params.channel, params.id);
     }
 
     return { body: { error: 'Method not allowed' }, status: 405 };
@@ -178,6 +184,34 @@ async function createMessage(
   // Sanitizar contenido
   const sanitizedContent = sanitizeHTML(content);
 
+  // Validación obligatoria de IA para padres
+  if (member.role === 'parent') {
+    try {
+      const analysisResult = await validateMessageTone(sanitizedContent, ctx, true);
+
+      // Si hay problemas o detecta borrachera, rechazar el mensaje
+      if (analysisResult.hasIssues || analysisResult.isDrunk) {
+        return {
+          body: {
+            error: 'El mensaje no cumple con los estándares de comunicación apropiada',
+            validation: {
+              hasIssues: analysisResult.hasIssues,
+              isDrunk: analysisResult.isDrunk,
+              issues: analysisResult.issues,
+              suggestion: analysisResult.suggestion,
+              toneScore: analysisResult.toneScore,
+            },
+          },
+          status: 400,
+        };
+      }
+    } catch (error) {
+      console.error('Error validating message tone:', error);
+      // En caso de error en la validación, permitir el envío pero registrar el error
+      // Esto evita bloquear mensajes si hay problemas técnicos con el servicio de IA
+    }
+  }
+
   // Generar hash del contenido
   const contentHash = await generateContentHash(sanitizedContent);
 
@@ -311,6 +345,74 @@ async function markAsRead(
     body: {
       success: true,
       readAt: timestamp,
+    },
+    status: 200,
+  };
+}
+
+/**
+ * Actualiza un mensaje (solo share_with_child por ahora)
+ */
+async function updateMessage(
+  request: Request,
+  ctx: Context,
+  familyId: string,
+  channel: string,
+  messageId: string
+): Promise<{ body: unknown; status: number }> {
+  if (!messageId || !familyId || !channel) {
+    return { body: { error: 'Message ID, family ID and channel required' }, status: 400 };
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const { shareWithChild } = body;
+
+  if (typeof shareWithChild !== 'boolean') {
+    return { body: { error: 'shareWithChild must be a boolean' }, status: 400 };
+  }
+
+  // Verificar que el mensaje existe y pertenece a la familia y canal
+  const message = await executeQueryFirst<{
+    sender_id: string;
+    family_id: string;
+  }>(
+    ctx.env.DB,
+    `SELECT sender_id, family_id FROM messages WHERE id = ? AND family_id = ? AND channel = ?`,
+    [messageId, familyId, channel]
+  );
+
+  if (!message) {
+    return { body: { error: 'Message not found' }, status: 404 };
+  }
+
+  // Solo el remitente puede actualizar el mensaje
+  if (message.sender_id !== ctx.userId) {
+    return { body: { error: 'Only the sender can update the message' }, status: 403 };
+  }
+
+  // Actualizar share_with_child
+  await executeMutation(
+    ctx.env.DB,
+    `UPDATE messages SET share_with_child = ? WHERE id = ?`,
+    [shareWithChild ? 1 : 0, messageId]
+  );
+
+  // Log de auditoría
+  await logAudit(ctx.env.DB, {
+    userId: ctx.userId,
+    familyId,
+    action: 'message_updated',
+    entityType: 'message',
+    entityId: messageId,
+    details: { channel, shareWithChild },
+    ipAddress: getClientIP(request),
+    userAgent: getUserAgent(request),
+  });
+
+  return {
+    body: {
+      success: true,
+      shareWithChild,
     },
     status: 200,
   };

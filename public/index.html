@@ -59,6 +59,10 @@
       padding: 12px 0;
     }
     
+    .nav-links .btn {
+      margin-left: 8px;
+    }
+    
     .mobile-menu-btn {
       display: none;
       background: none;
@@ -161,6 +165,25 @@
       gap: 16px;
       flex-wrap: wrap;
       animation: fadeInUp 0.6s ease-out 0.3s both;
+    }
+    
+    .hero-login-link {
+      margin-top: 16px;
+      font-size: 0.95rem;
+      color: var(--color-text-light);
+      animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+    
+    .hero-login-link a {
+      color: var(--color-sage);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    
+    .hero-login-link a:hover {
+      color: var(--color-sage-dark);
+      text-decoration: underline;
     }
     
     .hero-visual {
@@ -983,6 +1006,7 @@
           <a href="#solucion">Solución</a>
           <a href="#como-funciona">Cómo funciona</a>
           <a href="#precios">Precios</a>
+          <a href="/login.html" class="btn btn-secondary">Iniciar sesión</a>
           <a href="/login.html" class="btn btn-primary">Empezar gratis</a>
         </div>
         <button class="mobile-menu-btn" aria-label="Menu">
@@ -1008,6 +1032,9 @@
             <a href="/login.html" class="btn btn-primary btn-large">Crear cuenta gratis</a>
             <a href="#como-funciona" class="btn btn-secondary btn-large">Ver cómo funciona</a>
           </div>
+          <p class="hero-login-link">
+            ¿Ya tenés cuenta? <a href="/login.html">Iniciar sesión</a>
+          </p>
         </div>
         <div class="hero-visual">
           <div class="phone-mockup">

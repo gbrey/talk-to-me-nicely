@@ -470,10 +470,18 @@ nav.scrolled {
 }
 
 .chat-bubble.sent {
-  background: var(--color-sage);
-  color: white;
+  background: var(--color-sage-dark);
+  color: white !important;
   align-self: flex-end;
   border-bottom-right-radius: 6px;
+}
+
+.chat-bubble.sent * {
+  color: white !important;
+}
+
+.chat-bubble.sent p {
+  color: white !important;
 }
 
 .chat-bubble.received {

@@ -29,3 +29,7 @@ preview_bucket_name = "coparenting-attachments-preview"
 binding = "BUCKET"
 bucket_name = "coparenting-attachments"
 
+# Cloudflare Workers AI binding
+[ai]
+binding = "AI"
+

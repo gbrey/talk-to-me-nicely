@@ -19,6 +19,7 @@ import * as exportHandler from '~/api/export';
 interface Env {
   DB: D1Database;
   BUCKET: R2Bucket;
+  AI?: any; // Cloudflare Workers AI binding
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
   GOOGLE_CLIENT_ID?: string;
@@ -264,6 +265,11 @@ function parseRoute(path: string[]): {
     const [familyId, channel] = rest;
     if (rest.length === 2) {
       return { endpoint: 'messages:list', params: { familyId, channel } };
+    }
+    if (rest.length === 3) {
+      // PATCH /messages/{familyId}/{channel}/{messageId} - actualizar mensaje
+      const messageId = rest[2];
+      return { endpoint: 'messages:update', params: { familyId, channel, id: messageId } };
     }
     if (rest[2] === 'read') {
       return { endpoint: 'messages:read', params: { id: rest[3] } };
