@@ -5,167 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mensajes - Talk to me nicely</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="/css/custom.css">
-</head>
-<body class="bg-gray-50 min-h-screen">
-  <div x-data="messagesApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-blue-600">Mensajes</h1>
-      <a href="/index.html" class="text-blue-600 hover:underline">← Volver al Dashboard</a>
-    </header>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <!-- Canales -->
-      <div class="bg-white rounded-lg shadow-md p-4">
-        <h2 class="font-bold mb-4">Canales</h2>
-        <div class="space-y-2">
-          <template x-for="channel in channels" :key="channel.id">
-            <button
-              @click="selectChannel(channel.id)"
-              :class="selectedChannel === channel.id ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'"
-              class="w-full text-left px-4 py-2 rounded-md"
-            >
-              <div class="flex justify-between items-center">
-                <span x-text="channel.name"></span>
-                <span
-                  x-show="channel.unread > 0"
-                  class="bg-red-500 text-white text-xs rounded-full px-2 py-1"
-                  x-text="channel.unread"
-                ></span>
-              </div>
-            </button>
-          </template>
-        </div>
-      </div>
-
-      <!-- Chat -->
-      <div class="md:col-span-3 bg-white rounded-lg shadow-md p-6 flex flex-col" style="height: 600px;">
-        <div x-show="!selectedChannel" class="text-center text-gray-500 mt-20">
-          Selecciona un canal para ver los mensajes
-        </div>
-
-        <div x-show="selectedChannel" class="flex-1 flex flex-col">
-          <!-- Mensajes -->
-          <div class="flex-1 overflow-y-auto mb-4 space-y-4" x-ref="messagesContainer">
-            <template x-for="message in messages" :key="message.id">
-              <div class="flex flex-col" :class="message.senderId === currentUserId ? 'items-end' : 'items-start'">
-                <div
-                  class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg"
-                  :class="message.senderId === currentUserId ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'"
-                >
-                  <p class="text-sm font-medium mb-1" x-text="message.senderEmail"></p>
-                  <p class="text-sm" x-html="message.content"></p>
-                  <div class="flex justify-between items-center mt-2 text-xs opacity-75">
-                    <span x-text="formatTime(message.sentAt)"></span>
-                    <span x-show="message.isRead" class="ml-2">✓✓</span>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Input -->
-          <div class="border-t pt-4">
-            <textarea
-              x-model="newMessage"
-              @keydown.enter.prevent="sendMessage()"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md mb-2"
-              rows="3"
-              placeholder="Escribe tu mensaje..."
-            ></textarea>
-            <div class="flex gap-2">
-              <button
-                @click="reviewTone()"
-                class="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700"
-              >
-                Revisar Tono
-              </button>
-              <button
-                @click="sendMessage()"
-                :disabled="!newMessage.trim() || loading"
-                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                Enviar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal IA Coach -->
-    <div
-      x-show="showToneModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showToneModal = false"
-    >
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-xl font-bold mb-4">Análisis de Tono</h3>
-        <div x-show="toneAnalysis" class="space-y-4">
-          <div x-show="toneAnalysis.hasIssues" class="bg-red-50 border border-red-200 rounded-md p-4">
-            <p class="font-medium text-red-800 mb-2">Se detectaron problemas:</p>
-            <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
-              <template x-for="issue in toneAnalysis.issues" :key="issue">
-                <li x-text="issue"></li>
-              </template>
-            </ul>
-          </div>
-          <div x-show="!toneAnalysis.hasIssues" class="bg-green-50 border border-green-200 rounded-md p-4">
-            <p class="text-green-800">✓ El tono del mensaje es apropiado</p>
-          </div>
-          <div x-show="toneAnalysis.suggestion" class="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <p class="font-medium text-blue-800 mb-2">Sugerencia:</p>
-            <p class="text-sm text-blue-700" x-text="toneAnalysis.suggestion"></p>
-          </div>
-          <div class="flex gap-2">
-            <button
-              @click="useSuggestion()"
-              x-show="toneAnalysis.suggestion"
-              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-            >
-              Usar Sugerencia
-            </button>
-            <button
-              @click="sendOriginal()"
-              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-            >
-              Enviar Original
-            </button>
-            <button
-              @click="showToneModal = false"
-              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-        <div x-show="!toneAnalysis && !loadingTone" class="text-center text-gray-500">
-          No hay análisis disponible
-        </div>
-        <div x-show="loadingTone" class="text-center">
-          <span class="spinner"></span>
-          <p class="mt-2 text-gray-500">Analizando tono...</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
   <script type="module">
     import { api } from '/js/api.js';
     import { getCurrentUser } from '/js/auth.js';
 
-    function messagesApp() {
+    window.messagesApp = function messagesApp() {
       return {
         currentUserId: null,
         currentFamilyId: null,
         channels: [
-          { id: 'daily', name: 'Cotidiano', unread: 0 },
-          { id: 'health', name: 'Salud', unread: 0 },
-          { id: 'school', name: 'Escuela', unread: 0 },
-          { id: 'calendar', name: 'Calendario', unread: 0 },
-          { id: 'vacation', name: 'Vacaciones', unread: 0 },
+          { id: 'daily', name: 'Cotidiano', icon: '💬', color: 'blue' },
+          { id: 'health', name: 'Salud', icon: '🏥', color: 'red' },
+          { id: 'school', name: 'Escuela', icon: '📚', color: 'yellow' },
+          { id: 'calendar', name: 'Calendario', icon: '📅', color: 'green' },
+          { id: 'vacation', name: 'Vacaciones', icon: '🏖️', color: 'purple' },
         ],
         selectedChannel: null,
         messages: [],
@@ -174,6 +29,8 @@
         toneAnalysis: null,
         loading: false,
         loadingTone: false,
+        error: null,
+        success: null,
 
         async init() {
           const userResult = await getCurrentUser();
@@ -182,8 +39,11 @@
             return;
           }
           this.currentUserId = userResult.user.id;
-          // Obtener familyId del dashboard o de la primera familia
           await this.loadFamily();
+          // Auto-seleccionar el primer canal si hay familia
+          if (this.currentFamilyId && this.channels.length > 0) {
+            this.selectChannel(this.channels[0].id);
+          }
         },
 
         async loadFamily() {
@@ -194,6 +54,7 @@
             }
           } catch (error) {
             console.error('Error loading family:', error);
+            this.error = 'Error al cargar la familia';
           }
         },
 
@@ -205,38 +66,104 @@
         },
 
         async loadMessages(channelId) {
+          if (!this.currentFamilyId) return;
+          this.loading = true;
           try {
-            const response = await api.get(
-              `messages/${this.currentFamilyId}/${channelId}`
-            );
-            this.messages = response.messages.reverse();
-            // Marcar como leído
-            for (const msg of this.messages) {
-              if (!msg.isRead && msg.senderId !== this.currentUserId) {
-                await api.post(`messages/${msg.id}/read`);
+            const response = await api.get(`messages/${this.currentFamilyId}/${channelId}`);
+            this.messages = (response.messages || []).reverse();
+            // Auto-scroll al final
+            this.$nextTick(() => {
+              const container = this.$refs.messagesContainer;
+              if (container) {
+                container.scrollTop = container.scrollHeight;
               }
-            }
+            });
           } catch (error) {
             console.error('Error loading messages:', error);
+            this.error = 'Error al cargar mensajes: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async sendMessage() {
+          if (!this.newMessage.trim() || !this.currentFamilyId || !this.selectedChannel) return;
+          
+          this.loading = true;
+          this.error = null;
+          try {
+            const response = await api.post(`messages/${this.currentFamilyId}/${this.selectedChannel}`, {
+              content: this.newMessage,
+              shareWithChild: false,
+            });
+            if (response.success) {
+              this.newMessage = '';
+              await this.loadMessages(this.selectedChannel);
+              // Auto-scroll al final
+              this.$nextTick(() => {
+                const container = this.$refs.messagesContainer;
+                if (container) {
+                  container.scrollTop = container.scrollHeight;
+                }
+              });
+            }
+          } catch (error) {
+            this.error = 'Error al enviar mensaje: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
           }
         },
 
         async reviewTone() {
-          if (!this.newMessage.trim()) return;
+          if (!this.newMessage.trim()) {
+            this.error = 'Escribe un mensaje primero';
+            return;
+          }
+          
           this.loadingTone = true;
-          this.showToneModal = true;
-          this.toneAnalysis = null;
-
+          this.error = null;
           try {
             const response = await api.post('ai-coach/analyze', {
               content: this.newMessage,
             });
-            this.toneAnalysis = response.analysis;
+            this.toneAnalysis = response;
+            this.showToneModal = true;
           } catch (error) {
-            alert('Error al analizar tono: ' + error.message);
+            this.error = 'Error al analizar tono: ' + (error.message || 'Error desconocido');
           } finally {
             this.loadingTone = false;
           }
+        },
+
+        formatTime(timestamp) {
+          const date = new Date(timestamp * 1000);
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          
+          if (messageDate.getTime() === today.getTime()) {
+            return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          }
+          return date.toLocaleDateString('es-AR', { 
+            day: 'numeric', 
+            month: 'short', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+        },
+
+        formatDate(timestamp) {
+          const date = new Date(timestamp * 1000);
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          if (date.toDateString() === today.toDateString()) {
+            return 'Hoy';
+          } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'Ayer';
+          }
+          return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
         },
 
         useSuggestion() {
@@ -251,38 +178,269 @@
           await this.sendMessage();
         },
 
-        async sendMessage() {
-          if (!this.newMessage.trim() || !this.selectedChannel || !this.currentFamilyId) {
-            return;
-          }
-
-          this.loading = true;
-          try {
-            await api.post(`messages/${this.currentFamilyId}/${this.selectedChannel}`, {
-              content: this.newMessage,
-              shareWithChild: false,
-            });
-            this.newMessage = '';
-            await this.loadMessages(this.selectedChannel);
-          } catch (error) {
-            alert('Error al enviar mensaje: ' + error.message);
-          } finally {
-            this.loading = false;
-          }
+        getChannelColor(channelId) {
+          const channel = this.channels.find(c => c.id === channelId);
+          if (!channel) return 'gray';
+          return channel.color;
         },
 
-        formatTime(timestamp) {
-          const date = new Date(timestamp * 1000);
-          return date.toLocaleTimeString('es-AR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+        getChannelIcon(channelId) {
+          const channel = this.channels.find(c => c.id === channelId);
+          if (!channel) return '💬';
+          return channel.icon;
+        },
+
+        getChannelName(channelId) {
+          const channel = this.channels.find(c => c.id === channelId);
+          if (!channel) return 'Canal';
+          return channel.name;
+        },
+
+        shouldShowDateSeparator(index) {
+          if (index === 0) return true;
+          const currentMsg = this.messages[index];
+          const previousMsg = this.messages[index - 1];
+          if (!currentMsg || !previousMsg) return false;
+          
+          const currentDate = new Date((currentMsg.sentAt || currentMsg.sent_at) * 1000);
+          const previousDate = new Date((previousMsg.sentAt || previousMsg.sent_at) * 1000);
+          
+          return currentDate.toDateString() !== previousDate.toDateString();
         },
       };
-    }
-
-    window.messagesApp = messagesApp;
+    };
   </script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <div x-data="messagesApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-blue-600 mb-1">Mensajes</h1>
+        <p class="text-gray-600" x-text="selectedChannel ? getChannelName(selectedChannel) : 'Selecciona un canal'"></p>
+      </div>
+      <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+        ← Dashboard
+      </a>
+    </header>
+
+    <!-- Alertas -->
+    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+      <p x-text="error"></p>
+    </div>
+    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+      <p x-text="success"></p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Canales -->
+      <div class="bg-white rounded-xl shadow-lg p-4">
+        <h2 class="font-bold text-lg mb-4 text-gray-800">Canales</h2>
+        <div class="space-y-2">
+          <template x-for="channel in channels" :key="channel.id">
+            <button
+              @click="selectChannel(channel.id)"
+              :class="selectedChannel === channel.id 
+                ? 'bg-' + channel.color + '-600 text-white shadow-md' 
+                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-2 border-gray-200'"
+              class="w-full text-left px-4 py-3 rounded-lg transition-all font-medium"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-2xl" x-text="channel.icon"></span>
+                <span x-text="channel.name"></span>
+              </div>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="md:col-span-3 bg-white rounded-xl shadow-lg p-6 flex flex-col" style="height: 70vh; min-height: 600px;">
+        <div x-show="!selectedChannel" class="flex-1 flex items-center justify-center text-center text-gray-500">
+          <div>
+            <div class="text-6xl mb-4">💬</div>
+            <p class="text-xl font-semibold">Selecciona un canal para ver los mensajes</p>
+            <p class="text-sm mt-2">Elige un tema de conversación en el panel lateral</p>
+          </div>
+        </div>
+
+        <div x-show="selectedChannel" class="flex-1 flex flex-col">
+          <!-- Header del Canal -->
+          <div class="flex items-center gap-3 mb-4 pb-4 border-b-2 border-gray-100">
+            <span class="text-3xl" x-text="getChannelIcon(selectedChannel)"></span>
+            <div>
+              <h3 class="font-bold text-lg text-gray-800" x-text="getChannelName(selectedChannel)"></h3>
+              <p class="text-sm text-gray-600" x-text="messages.length + ' mensajes'"></p>
+            </div>
+          </div>
+
+          <!-- Mensajes -->
+          <div class="flex-1 overflow-y-auto mb-4 space-y-4 pr-2" x-ref="messagesContainer">
+            <template x-for="(message, index) in messages" :key="message.id">
+              <div>
+                <!-- Separador de fecha -->
+                <div x-show="shouldShowDateSeparator(index)" class="text-center my-4">
+                  <span class="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-sm font-medium" x-text="formatDate(message.sentAt || message.sent_at)"></span>
+                </div>
+                
+                <!-- Mensaje -->
+                <div class="flex flex-col" :class="(message.senderId || message.sender_id) === currentUserId ? 'items-end' : 'items-start'">
+                  <div
+                    class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm"
+                    :class="(message.senderId || message.sender_id) === currentUserId 
+                      ? 'bg-blue-600 text-white rounded-br-none' 
+                      : 'bg-gray-100 text-gray-800 rounded-bl-none'"
+                  >
+                    <p class="text-xs font-semibold mb-1 opacity-75" x-text="message.senderEmail || message.sender_email"></p>
+                    <p class="text-sm whitespace-pre-wrap break-words" x-html="message.content"></p>
+                    <div class="flex justify-end items-center gap-2 mt-2 text-xs opacity-75">
+                      <span x-text="formatTime(message.sentAt || message.sent_at)"></span>
+                      <span x-show="message.isRead || message.read_at" class="ml-1">✓✓</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+            
+            <div x-show="loading" class="text-center py-4">
+              <p class="text-gray-500">Cargando mensajes...</p>
+            </div>
+            
+            <div x-show="!loading && messages.length === 0" class="text-center py-8 text-gray-500">
+              <div class="text-4xl mb-2">📭</div>
+              <p>No hay mensajes en este canal</p>
+              <p class="text-sm mt-1">Sé el primero en escribir</p>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="border-t-2 border-gray-100 pt-4">
+            <textarea
+              x-model="newMessage"
+              @keydown.enter.ctrl="sendMessage()"
+              @keydown.enter.shift.exact.prevent
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none resize-none"
+              rows="3"
+              placeholder="Escribe tu mensaje... (Ctrl+Enter para enviar, Shift+Enter para nueva línea)"
+            ></textarea>
+            <div class="flex gap-2 mt-3">
+              <button
+                @click="reviewTone()"
+                :disabled="!newMessage.trim() || loadingTone"
+                class="flex items-center justify-center gap-2 bg-yellow-500 text-white py-3 px-6 rounded-xl hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              >
+                <span>🤖</span>
+                <span>Revisar Tono</span>
+              </button>
+              <button
+                @click="sendMessage()"
+                :disabled="!newMessage.trim() || loading"
+                class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal IA Coach -->
+    <div
+      x-show="showToneModal"
+      x-cloak
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="showToneModal = false"
+    >
+      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="text-4xl">🤖</span>
+          <h3 class="text-2xl font-bold">Análisis de Tono</h3>
+        </div>
+        
+        <div x-show="toneAnalysis" class="space-y-4">
+          <div x-show="toneAnalysis.hasIssues" class="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+            <p class="font-semibold text-red-800 mb-2 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>Se detectaron problemas:</span>
+            </p>
+            <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+              <template x-for="issue in toneAnalysis.issues" :key="issue">
+                <li x-text="issue"></li>
+              </template>
+            </ul>
+          </div>
+          
+          <div x-show="!toneAnalysis.hasIssues" class="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+            <p class="text-green-800 font-semibold flex items-center gap-2">
+              <span>✓</span>
+              <span>El tono del mensaje es apropiado</span>
+            </p>
+          </div>
+          
+          <div x-show="toneAnalysis.suggestion" class="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+            <p class="font-semibold text-blue-800 mb-2">💡 Sugerencia:</p>
+            <p class="text-sm text-blue-700 whitespace-pre-wrap" x-text="toneAnalysis.suggestion"></p>
+          </div>
+          
+          <div class="flex gap-3 pt-4">
+            <button
+              @click="useSuggestion()"
+              x-show="toneAnalysis.suggestion"
+              class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors shadow-md font-semibold"
+            >
+              Usar Sugerencia
+            </button>
+            <button
+              @click="sendOriginal()"
+              class="flex-1 bg-green-600 text-white py-3 px-6 rounded-xl hover:bg-green-700 transition-colors shadow-md font-semibold"
+            >
+              Enviar Original
+            </button>
+            <button
+              @click="showToneModal = false"
+              class="bg-gray-200 text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors font-semibold"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+        
+        <div x-show="!toneAnalysis && !loadingTone" class="text-center text-gray-500 py-8">
+          <p>No hay análisis disponible</p>
+        </div>
+        
+        <div x-show="loadingTone" class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p class="text-gray-600 font-medium">Analizando tono...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    /* Scrollbar personalizado */
+    .overflow-y-auto::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
 </body>
 </html>
-

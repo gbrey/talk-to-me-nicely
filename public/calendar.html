@@ -5,141 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendario - Talk to me nicely</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="/css/custom.css">
-</head>
-<body class="bg-gray-50 min-h-screen">
-  <div x-data="calendarApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-green-600">Calendario</h1>
-      <div class="flex gap-4">
-        <button
-          @click="showEventModal = true"
-          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-        >
-          + Nuevo Evento
-        </button>
-        <a href="/index.html" class="text-blue-600 hover:underline">← Dashboard</a>
-      </div>
-    </header>
-
-    <!-- Calendario -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <div class="mb-4 flex justify-between items-center">
-        <button @click="previousMonth()" class="px-4 py-2 bg-gray-200 rounded-md">←</button>
-        <h2 class="text-xl font-bold" x-text="currentMonthYear"></h2>
-        <button @click="nextMonth()" class="px-4 py-2 bg-gray-200 rounded-md">→</button>
-      </div>
-
-      <!-- Grid de calendario -->
-      <div class="grid grid-cols-7 gap-2">
-        <template x-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">
-          <div class="text-center font-bold text-gray-700 py-2" x-text="day"></div>
-        </template>
-        <template x-for="day in calendarDays" :key="day.date">
-          <div
-            class="border rounded-md p-2 min-h-24"
-            :class="day.isCurrentMonth ? 'bg-white' : 'bg-gray-100'"
-          >
-            <div class="text-sm font-medium mb-1" x-text="day.day"></div>
-            <template x-for="event in day.events" :key="event.id">
-              <div
-                class="text-xs p-1 rounded mb-1 truncate"
-                :class="getEventColor(event.eventType)"
-                x-text="event.title"
-              ></div>
-            </template>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Lista de eventos -->
-    <div class="mt-6 bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold mb-4">Próximos Eventos</h2>
-      <div class="space-y-2">
-        <template x-for="event in upcomingEvents" :key="event.id">
-          <div class="border rounded-md p-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <h3 class="font-semibold" x-text="event.title"></h3>
-                <p class="text-sm text-gray-600" x-text="formatDate(event.startTime)"></p>
-                <p class="text-xs text-gray-500" x-text="event.eventType"></p>
-              </div>
-              <button
-                @click="deleteEvent(event.id)"
-                class="text-red-600 hover:text-red-800"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Modal Nuevo Evento -->
-    <div
-      x-show="showEventModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showEventModal = false"
-    >
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-xl font-bold mb-4">Nuevo Evento</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-            <input
-              type="text"
-              x-model="newEvent.title"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select x-model="newEvent.eventType" class="w-full px-4 py-2 border border-gray-300 rounded-md">
-              <option value="pickup">Retiro</option>
-              <option value="dropoff">Entrega</option>
-              <option value="medical">Cita Médica</option>
-              <option value="school">Evento Escolar</option>
-              <option value="vacation">Vacaciones</option>
-              <option value="other">Otro</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora</label>
-            <input
-              type="datetime-local"
-              x-model="newEvent.startTime"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div class="flex gap-2">
-            <button
-              @click="createEvent()"
-              :disabled="loading"
-              class="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50"
-            >
-              Crear
-            </button>
-            <button
-              @click="showEventModal = false"
-              class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
   <script type="module">
     import { api } from '/js/api.js';
     import { getCurrentUser } from '/js/auth.js';
 
-    function calendarApp() {
+    window.calendarApp = function calendarApp() {
       return {
         currentFamilyId: null,
         currentDate: new Date(),
@@ -149,8 +21,12 @@
           title: '',
           eventType: 'other',
           startTime: '',
+          description: '',
         },
+        selectedEvent: null,
         loading: false,
+        error: null,
+        success: null,
 
         get currentMonthYear() {
           return this.currentDate.toLocaleDateString('es-AR', {
@@ -183,14 +59,28 @@
             const date = new Date(year, month, day);
             const dateStr = date.toISOString().split('T')[0];
             const dayEvents = this.events.filter((e) => {
-              const eventDate = new Date(e.startTime * 1000);
+              const eventTimestamp = e.startTime || e.start_time;
+              if (!eventTimestamp) return false;
+              const eventDate = new Date(eventTimestamp * 1000);
               return eventDate.toISOString().split('T')[0] === dateStr;
             });
             days.push({
               date: date.toISOString(),
-              day,
+              day: day,
               isCurrentMonth: true,
+              isToday: date.toDateString() === new Date().toDateString(),
               events: dayEvents,
+            });
+          }
+          // Días del mes siguiente
+          const remainingDays = 42 - days.length;
+          for (let day = 1; day <= remainingDays; day++) {
+            const date = new Date(year, month + 1, day);
+            days.push({
+              date: date.toISOString(),
+              day: date.getDate(),
+              isCurrentMonth: false,
+              events: [],
             });
           }
           return days;
@@ -199,8 +89,8 @@
         get upcomingEvents() {
           const now = Math.floor(Date.now() / 1000);
           return this.events
-            .filter((e) => e.startTime >= now)
-            .sort((a, b) => a.startTime - b.startTime)
+            .filter((e) => (e.startTime || e.start_time) >= now)
+            .sort((a, b) => (a.startTime || a.start_time) - (b.startTime || b.start_time))
             .slice(0, 10);
         },
 
@@ -222,16 +112,21 @@
             }
           } catch (error) {
             console.error('Error loading family:', error);
+            this.error = 'Error al cargar la familia';
           }
         },
 
         async loadEvents() {
           if (!this.currentFamilyId) return;
+          this.loading = true;
           try {
             const response = await api.get(`calendar/${this.currentFamilyId}`);
-            this.events = response.events;
+            this.events = response.events || [];
           } catch (error) {
             console.error('Error loading events:', error);
+            this.error = 'Error al cargar eventos: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
           }
         },
 
@@ -251,50 +146,121 @@
           );
         },
 
+        goToToday() {
+          this.currentDate = new Date();
+        },
+
+        openEventModal(event = null) {
+          if (event) {
+            this.selectedEvent = event;
+            this.newEvent = {
+              title: event.title,
+              eventType: event.eventType || event.event_type || 'other',
+              startTime: this.formatDateTimeForInput(event.startTime || event.start_time),
+              description: event.description || '',
+            };
+          } else {
+            this.selectedEvent = null;
+            this.newEvent = {
+              title: '',
+              eventType: 'other',
+              startTime: '',
+              description: '',
+            };
+          }
+          this.showEventModal = true;
+        },
+
+        formatDateTimeForInput(timestamp) {
+          if (!timestamp) return '';
+          const date = new Date(timestamp * 1000);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        },
+
         async createEvent() {
           if (!this.newEvent.title || !this.newEvent.startTime) {
-            alert('Completa todos los campos');
+            this.error = 'Completa todos los campos requeridos';
             return;
           }
 
           this.loading = true;
+          this.error = null;
           try {
             const startTime = Math.floor(new Date(this.newEvent.startTime).getTime() / 1000);
             await api.post(`calendar/${this.currentFamilyId}`, {
               eventType: this.newEvent.eventType,
               title: this.newEvent.title,
               startTime,
+              description: this.newEvent.description || null,
             });
+            this.success = this.selectedEvent ? 'Evento actualizado' : 'Evento creado';
             this.showEventModal = false;
-            this.newEvent = { title: '', eventType: 'other', startTime: '' };
+            this.selectedEvent = null;
+            this.newEvent = { title: '', eventType: 'other', startTime: '', description: '' };
             await this.loadEvents();
+            setTimeout(() => this.success = null, 3000);
           } catch (error) {
-            alert('Error al crear evento: ' + error.message);
+            this.error = 'Error al crear evento: ' + (error.message || 'Error desconocido');
           } finally {
             this.loading = false;
           }
         },
 
         async deleteEvent(eventId) {
-          if (!confirm('¿Eliminar este evento?')) return;
+          if (!confirm('¿Estás seguro de eliminar este evento?')) return;
+          this.loading = true;
+          this.error = null;
           try {
             await api.delete(`calendar/${this.currentFamilyId}/${eventId}`);
+            this.success = 'Evento eliminado';
             await this.loadEvents();
+            setTimeout(() => this.success = null, 3000);
           } catch (error) {
-            alert('Error al eliminar evento: ' + error.message);
+            this.error = 'Error al eliminar evento: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
           }
         },
 
         getEventColor(eventType) {
           const colors = {
-            pickup: 'bg-blue-200 text-blue-800',
-            dropoff: 'bg-green-200 text-green-800',
-            medical: 'bg-red-200 text-red-800',
-            school: 'bg-yellow-200 text-yellow-800',
-            vacation: 'bg-purple-200 text-purple-800',
-            other: 'bg-gray-200 text-gray-800',
+            pickup: 'bg-blue-100 text-blue-800 border-blue-300',
+            dropoff: 'bg-green-100 text-green-800 border-green-300',
+            medical: 'bg-red-100 text-red-800 border-red-300',
+            school: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+            vacation: 'bg-purple-100 text-purple-800 border-purple-300',
+            other: 'bg-gray-100 text-gray-800 border-gray-300',
           };
           return colors[eventType] || colors.other;
+        },
+
+        getEventIcon(eventType) {
+          const icons = {
+            pickup: '🚗',
+            dropoff: '📍',
+            medical: '🏥',
+            school: '📚',
+            vacation: '🏖️',
+            other: '📅',
+          };
+          return icons[eventType] || icons.other;
+        },
+
+        getEventTypeLabel(eventType) {
+          const labels = {
+            pickup: 'Retiro',
+            dropoff: 'Entrega',
+            medical: 'Cita Médica',
+            school: 'Evento Escolar',
+            vacation: 'Vacaciones',
+            other: 'Otro',
+          };
+          return labels[eventType] || 'Otro';
         },
 
         formatDate(timestamp) {
@@ -307,11 +273,244 @@
             minute: '2-digit',
           });
         },
-      };
-    }
 
-    window.calendarApp = calendarApp;
+        formatTime(timestamp) {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        },
+      };
+    };
   </script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen">
+  <div x-data="calendarApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-green-600 mb-1">Calendario</h1>
+        <p class="text-gray-600" x-text="events.length + ' eventos'"></p>
+      </div>
+      <div class="flex gap-4">
+        <button
+          @click="openEventModal()"
+          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-semibold flex items-center gap-2"
+        >
+          <span>➕</span>
+          <span>Nuevo Evento</span>
+        </button>
+        <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
+          ← Dashboard
+        </a>
+      </div>
+    </header>
+
+    <!-- Alertas -->
+    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+      <p x-text="error"></p>
+    </div>
+    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+      <p x-text="success"></p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Calendario -->
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
+        <div class="mb-6 flex justify-between items-center">
+          <div class="flex gap-3">
+            <button @click="previousMonth()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-semibold">
+              ←
+            </button>
+            <button @click="goToToday()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors font-semibold">
+              Hoy
+            </button>
+            <button @click="nextMonth()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-semibold">
+              →
+            </button>
+          </div>
+          <h2 class="text-2xl font-bold capitalize" x-text="currentMonthYear"></h2>
+        </div>
+
+        <!-- Grid de calendario -->
+        <div class="grid grid-cols-7 gap-2">
+          <template x-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">
+            <div class="text-center font-bold text-gray-700 py-3 text-sm" x-text="day"></div>
+          </template>
+          <template x-for="day in calendarDays" :key="day.date">
+            <div
+              class="border-2 rounded-xl p-2 min-h-24 cursor-pointer hover:bg-gray-50 transition-colors"
+              :class="[
+                day.isCurrentMonth ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100',
+                day.isToday ? 'border-green-500 bg-green-50' : ''
+              ]"
+              @click="day.events.length > 0 && openEventModal(day.events[0])"
+            >
+              <div class="flex justify-between items-start mb-1">
+                <div 
+                  class="text-sm font-semibold px-2 py-1 rounded"
+                  :class="day.isToday ? 'bg-green-600 text-white' : day.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'"
+                  x-text="day.day"
+                ></div>
+                <span x-show="day.events.length > 0" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold" x-text="day.events.length"></span>
+              </div>
+              <div class="space-y-1">
+                <template x-for="event in day.events.slice(0, 2)" :key="event.id">
+                  <div
+                    class="text-xs p-1 rounded truncate border"
+                    :class="getEventColor(event.eventType || event.event_type)"
+                    x-text="getEventIcon(event.eventType || event.event_type) + ' ' + event.title"
+                  ></div>
+                </template>
+                <div x-show="day.events.length > 2" class="text-xs text-gray-500 px-1">
+                  +<span x-text="day.events.length - 2"></span> más
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Panel lateral -->
+      <div class="space-y-6">
+        <!-- Eventos Próximos -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">Próximos Eventos</h2>
+          <div class="space-y-3">
+            <template x-for="event in upcomingEvents" :key="event.id">
+              <div class="border-2 border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer" @click="openEventModal(event)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl" x-text="getEventIcon(event.eventType || event.event_type)"></span>
+                    <div>
+                      <h3 class="font-semibold text-gray-800" x-text="event.title"></h3>
+                      <p class="text-xs text-gray-500" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
+                    </div>
+                  </div>
+                  <button
+                    @click.stop="deleteEvent(event.id)"
+                    class="text-red-500 hover:text-red-700 text-lg"
+                    title="Eliminar evento"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">
+                  <span class="font-medium">📅</span>
+                  <span x-text="formatDate(event.startTime || event.start_time)"></span>
+                </p>
+                <p x-show="event.description" class="text-sm text-gray-500 mt-2 line-clamp-2" x-text="event.description"></p>
+              </div>
+            </template>
+            <div x-show="upcomingEvents.length === 0" class="text-center py-8 text-gray-500">
+              <div class="text-4xl mb-2">📅</div>
+              <p class="text-sm">No hay eventos próximos</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">Leyenda</h2>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🚗</span>
+              <span class="text-gray-700">Retiro</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📍</span>
+              <span class="text-gray-700">Entrega</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🏥</span>
+              <span class="text-gray-700">Cita Médica</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📚</span>
+              <span class="text-gray-700">Evento Escolar</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🏖️</span>
+              <span class="text-gray-700">Vacaciones</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📅</span>
+              <span class="text-gray-700">Otro</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Nuevo/Editar Evento -->
+    <div
+      x-show="showEventModal"
+      x-cloak
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="showEventModal = false"
+    >
+      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+        <h3 class="text-2xl font-bold mb-6" x-text="selectedEvent ? 'Editar Evento' : 'Nuevo Evento'"></h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Título *</label>
+            <input
+              type="text"
+              x-model="newEvent.title"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+              placeholder="Ej: Retiro en la escuela"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+            <select x-model="newEvent.eventType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none">
+              <option value="pickup">🚗 Retiro</option>
+              <option value="dropoff">📍 Entrega</option>
+              <option value="medical">🏥 Cita Médica</option>
+              <option value="school">📚 Evento Escolar</option>
+              <option value="vacation">🏖️ Vacaciones</option>
+              <option value="other">📅 Otro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha y Hora *</label>
+            <input
+              type="datetime-local"
+              x-model="newEvent.startTime"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Descripción (opcional)</label>
+            <textarea
+              x-model="newEvent.description"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none resize-none"
+              rows="3"
+              placeholder="Notas adicionales..."
+            ></textarea>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button
+              @click="createEvent()"
+              :disabled="loading || !newEvent.title || !newEvent.startTime"
+              class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+            >
+              <span x-text="selectedEvent ? 'Guardar Cambios' : 'Crear Evento'"></span>
+            </button>
+            <button
+              @click="showEventModal = false; selectedEvent = null"
+              class="bg-gray-200 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
 </body>
 </html>
-
