@@ -9,63 +9,11 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
   
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+  <!-- Design System -->
+  <link rel="stylesheet" href="/css/design-system.css">
   
   <style>
-    :root {
-      --color-cream: #FDF8F3;
-      --color-warm-white: #FFFCF9;
-      --color-sage: #7A9E7E;
-      --color-sage-light: #A8C5AB;
-      --color-sage-dark: #5B7A5E;
-      --color-terracotta: #C4785E;
-      --color-terracotta-light: #E8A088;
-      --color-navy: #2C3E50;
-      --color-navy-light: #34495E;
-      --color-text: #3D3D3D;
-      --color-text-light: #6B6B6B;
-      --color-border: #E8E2DB;
-      
-      --font-display: 'Fraunces', Georgia, serif;
-      --font-body: 'DM Sans', -apple-system, sans-serif;
-      
-      --shadow-soft: 0 4px 20px rgba(0,0,0,0.06);
-      --shadow-medium: 0 8px 40px rgba(0,0,0,0.08);
-      --shadow-large: 0 20px 60px rgba(0,0,0,0.1);
-      
-      --radius-sm: 8px;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-      --radius-xl: 32px;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    html {
-      scroll-behavior: smooth;
-    }
-    
-    body {
-      font-family: var(--font-body);
-      color: var(--color-text);
-      background: var(--color-cream);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-    
-    /* Utility Classes */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
+    /* Estilos específicos de la landing page */
     
     /* Background Shapes */
     .bg-shape {
@@ -93,7 +41,7 @@
       left: -100px;
     }
     
-    /* Navigation */
+    /* Navigation específica de landing */
     nav {
       position: fixed;
       top: 0;
@@ -109,100 +57,6 @@
       backdrop-filter: blur(20px);
       box-shadow: var(--shadow-soft);
       padding: 12px 0;
-    }
-    
-    .nav-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      color: var(--color-navy);
-    }
-    
-    .logo-icon {
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      box-shadow: 0 4px 12px rgba(122, 158, 126, 0.3);
-    }
-    
-    .logo-text {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
-    
-    .nav-links {
-      display: flex;
-      gap: 32px;
-      align-items: center;
-    }
-    
-    .nav-links a {
-      text-decoration: none;
-      color: var(--color-text);
-      font-weight: 500;
-      font-size: 0.95rem;
-      transition: color 0.2s ease;
-    }
-    
-    .nav-links a:hover {
-      color: var(--color-sage-dark);
-    }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: var(--radius-md);
-      font-family: var(--font-body);
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      border: none;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
-      color: white;
-      box-shadow: 0 4px 16px rgba(122, 158, 126, 0.35);
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(122, 158, 126, 0.4);
-    }
-    
-    .btn-secondary {
-      background: white;
-      color: var(--color-navy);
-      border: 2px solid var(--color-border);
-    }
-    
-    .btn-secondary:hover {
-      border-color: var(--color-sage);
-      background: var(--color-warm-white);
-    }
-    
-    .btn-large {
-      padding: 18px 36px;
-      font-size: 1.05rem;
-      border-radius: var(--radius-lg);
     }
     
     .mobile-menu-btn {
@@ -1000,40 +854,7 @@
       color: white;
     }
     
-    /* Animations */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    
-    @keyframes bubbleIn {
-      from {
-        opacity: 0;
-        transform: scale(0.8) translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-    }
-    
-    /* Responsive */
+    /* Responsive específico de landing */
     @media (max-width: 1024px) {
       .hero-content {
         grid-template-columns: 1fr;
@@ -1365,17 +1186,15 @@
           <div class="price">Gratis</div>
           <p class="price-note">Para siempre</p>
           <ul class="pricing-features">
-            <li>Mensajería por canales</li>
-            <li>Calendario compartido</li>
-            <li>Timestamps verificables</li>
-            <li>5 análisis de IA por día</li>
+            <li>1 solo hijo</li>
+            <li>Mensajería 10 mensajes por día con IA incluida</li>
           </ul>
           <a href="/login.html" class="btn btn-secondary">Empezar gratis</a>
         </div>
         <div class="pricing-card popular">
           <h3>Familia</h3>
-          <div class="price">$2.990<span>/mes</span></div>
-          <p class="price-note">Por familia (ambos padres)</p>
+          <div class="price">$10.000<span>/mes</span></div>
+          <p class="price-note">Por padre</p>
           <ul class="pricing-features">
             <li>Todo lo del plan Básico</li>
             <li>IA ilimitada</li>
@@ -1387,7 +1206,7 @@
         </div>
         <div class="pricing-card">
           <h3>Profesional</h3>
-          <div class="price">$4.990<span>/mes</span></div>
+          <div class="price">$50.000<span>/mes</span></div>
           <p class="price-note">Para estudios jurídicos</p>
           <ul class="pricing-features">
             <li>Todo lo del plan Familia</li>

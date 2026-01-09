@@ -185,8 +185,8 @@ async function register(
       userId,
       'data_processing',
       timestamp,
-      ipAddress || null,
-      userAgent || null,
+      ipAddress ?? null,
+      userAgent ?? null,
     ]
   );
 

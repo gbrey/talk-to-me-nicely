@@ -3,13 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vista Niño - Talk to me nicely</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Vista Niño - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .child-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .tab-button {
+      padding: 12px 24px;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    
+    .tab-button.active {
+      box-shadow: var(--shadow-medium);
+    }
+    
+    .event-card {
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+    }
+    
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+  </style>
   
   <script type="module">
     import { api } from '/js/api.js';
-    import { getCurrentUser } from '/js/auth.js';
+    import { getCurrentUser, logout as authLogout } from '/js/auth.js';
 
     window.childViewApp = function childViewApp() {
       return {
@@ -22,10 +56,22 @@
 
         async init() {
           const userResult = await getCurrentUser();
-          if (!userResult.success || userResult.user.role !== 'child') {
+          if (!userResult.success) {
             window.location.href = '/login.html';
             return;
           }
+          
+          // Redirigir según el rol: solo los niños pueden ver esta vista
+          const userRole = userResult.user.role;
+          if (userRole !== 'child') {
+            if (userRole === 'professional') {
+              window.location.href = '/professional.html';
+            } else {
+              window.location.href = '/dashboard.html';
+            }
+            return;
+          }
+          
           this.currentUserId = userResult.user.id;
           await this.loadFamily();
           await this.loadData();
@@ -108,12 +154,12 @@
 
         getEventColor(eventType) {
           const colors = {
-            pickup: 'bg-blue-100 border-blue-300 text-blue-800',
-            dropoff: 'bg-green-100 border-green-300 text-green-800',
-            medical: 'bg-red-100 border-red-300 text-red-800',
-            school: 'bg-yellow-100 border-yellow-300 text-yellow-800',
-            vacation: 'bg-purple-100 border-purple-300 text-purple-800',
-            other: 'bg-gray-100 border-gray-300 text-gray-800',
+            pickup: 'background: rgba(122, 158, 126, 0.15); border-color: var(--color-sage-light); color: var(--color-sage-dark);',
+            dropoff: 'background: rgba(122, 158, 126, 0.2); border-color: var(--color-sage); color: var(--color-sage-dark);',
+            medical: 'background: rgba(196, 120, 94, 0.15); border-color: var(--color-terracotta-light); color: var(--color-terracotta);',
+            school: 'background: rgba(255, 193, 7, 0.15); border-color: #FFC107; color: #F57C00;',
+            vacation: 'background: rgba(156, 39, 176, 0.15); border-color: #9C27B0; color: #7B1FA2;',
+            other: 'background: var(--color-cream); border-color: var(--color-border); color: var(--color-text);',
           };
           return colors[eventType] || colors.other;
         },
@@ -190,36 +236,49 @@
           tomorrow.setDate(tomorrow.getDate() + 1);
           return date.toDateString() === tomorrow.toDateString();
         },
+
+        async logout() {
+          await authLogout();
+        },
       };
     };
   </script>
   
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50 min-h-screen">
-  <div x-data="childViewApp()" x-init="init()" class="max-w-4xl mx-auto px-4 py-6">
+<body>
+  <div x-data="childViewApp()" x-init="init()" class="child-container">
     <!-- Header -->
-    <header class="bg-white rounded-2xl shadow-lg p-6 mb-6 text-center">
-      <div class="flex items-center justify-center gap-3 mb-3">
-        <span class="text-5xl">👋</span>
-        <div>
-          <h1 class="text-3xl font-bold text-purple-600 mb-1">¡Hola!</h1>
-          <p class="text-gray-600">Tu calendario y mensajes</p>
+    <header class="card mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span style="font-size: 3rem;">👋</span>
+          <div>
+            <h1 style="font-size: 1.75rem; color: var(--color-sage-dark); margin-bottom: 4px;">¡Hola!</h1>
+            <p style="color: var(--color-text-light); font-size: 0.9rem;">Tu calendario y mensajes</p>
+          </div>
         </div>
+        <button
+          @click="logout()"
+          class="btn btn-danger"
+          style="font-size: 0.85rem; padding: 10px 20px;"
+        >
+          Cerrar Sesión
+        </button>
       </div>
-      <div class="flex gap-2 justify-center mt-4">
+      <div class="flex gap-2 justify-center">
         <button
           @click="selectedTab = 'calendar'"
-          :class="selectedTab === 'calendar' ? 'bg-purple-600 text-white shadow-lg' : 'bg-purple-100 text-purple-700'"
-          class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2"
+          :class="selectedTab === 'calendar' ? 'tab-button active' : 'tab-button'"
+          :style="selectedTab === 'calendar' ? 'background: var(--color-sage); color: white;' : 'background: var(--color-cream); color: var(--color-sage-dark); border: 2px solid var(--color-border);'"
         >
           <span>📅</span>
           <span>Calendario</span>
         </button>
         <button
           @click="selectedTab = 'messages'"
-          :class="selectedTab === 'messages' ? 'bg-pink-600 text-white shadow-lg' : 'bg-pink-100 text-pink-700'"
-          class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2"
+          :class="selectedTab === 'messages' ? 'tab-button active' : 'tab-button'"
+          :style="selectedTab === 'messages' ? 'background: var(--color-terracotta); color: white;' : 'background: var(--color-cream); color: var(--color-terracotta); border: 2px solid var(--color-border);'"
         >
           <span>💬</span>
           <span>Mensajes</span>
@@ -228,121 +287,106 @@
     </header>
 
     <!-- Loading -->
-    <div x-show="loading" class="text-center py-8">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-      <p class="text-gray-600">Cargando...</p>
+    <div x-show="loading" class="text-center" style="padding: 32px;">
+      <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 16px;"></div>
+      <p style="color: var(--color-text-light);">Cargando...</p>
     </div>
 
     <!-- Calendario Tab -->
-    <div x-show="selectedTab === 'calendar' && !loading" class="space-y-6">
-      <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h2 class="text-2xl font-bold mb-6 text-center text-purple-600 flex items-center justify-center gap-2">
+    <div x-show="selectedTab === 'calendar' && !loading" x-cloak>
+      <div class="card mb-6">
+        <h2 class="card-title text-center" style="color: var(--color-sage-dark); margin-bottom: 24px;">
           <span>📅</span>
           <span>Próximos Eventos</span>
         </h2>
         
-        <div class="space-y-4">
+        <div>
           <template x-for="event in childEvents" :key="event.id">
-            <div 
-              class="border-2 rounded-2xl p-5 transition-all hover:shadow-lg transform hover:-translate-y-1"
-              :class="getEventColor(event.eventType || event.event_type)"
-            >
+            <div class="event-card" :style="getEventColor(event.eventType || event.event_type)">
               <div class="flex items-start gap-4">
-                <div class="text-5xl flex-shrink-0" x-text="getEventIcon(event.eventType || event.event_type)"></div>
-                <div class="flex-1">
+                <div style="font-size: 3rem; flex-shrink: 0;" x-text="getEventIcon(event.eventType || event.event_type)"></div>
+                <div style="flex: 1;">
                   <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-xl" x-text="event.title"></h3>
+                    <h3 style="font-weight: 700; font-size: 1.25rem;" x-text="event.title"></h3>
                     <span 
-                      class="px-3 py-1 rounded-full text-xs font-semibold"
-                      :class="isToday(event.startTime || event.start_time) ? 'bg-yellow-200 text-yellow-800' : isTomorrow(event.startTime || event.start_time) ? 'bg-blue-200 text-blue-800' : ''"
+                      class="badge"
+                      :style="isToday(event.startTime || event.start_time) ? 'background: rgba(255, 193, 7, 0.3); color: #F57C00;' : isTomorrow(event.startTime || event.start_time) ? 'background: rgba(122, 158, 126, 0.3); color: var(--color-sage-dark);' : ''"
                       x-show="isToday(event.startTime || event.start_time) || isTomorrow(event.startTime || event.start_time)"
                       x-text="isToday(event.startTime || event.start_time) ? '¡Hoy!' : 'Mañana'"
                     ></span>
                   </div>
-                  <p class="text-sm mb-1" x-text="getEventLabel(event.eventType || event.event_type)"></p>
-                  <p class="font-semibold text-lg" x-text="formatDate(event.startTime || event.start_time)"></p>
-                  <p x-show="event.description" class="text-sm mt-2 opacity-75" x-text="event.description"></p>
+                  <p style="font-size: 0.9rem; margin-bottom: 4px;" x-text="getEventLabel(event.eventType || event.event_type)"></p>
+                  <p style="font-weight: 600; font-size: 1.1rem;" x-text="formatDate(event.startTime || event.start_time)"></p>
+                  <p x-show="event.description" style="font-size: 0.85rem; margin-top: 8px; opacity: 0.8;" x-text="event.description"></p>
                 </div>
               </div>
             </div>
           </template>
           
-          <div x-show="childEvents.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">📅</div>
-            <p class="text-xl font-semibold text-gray-700 mb-2">No hay eventos próximos</p>
-            <p class="text-gray-500">¡Tranquilo! Te avisaremos cuando haya algo nuevo.</p>
+          <div x-show="childEvents.length === 0" class="text-center" style="padding: 48px;">
+            <div style="font-size: 4rem; margin-bottom: 16px;">📅</div>
+            <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">No hay eventos próximos</p>
+            <p style="color: var(--color-text-light);">¡Tranquilo! Te avisaremos cuando haya algo nuevo.</p>
           </div>
         </div>
       </div>
 
       <!-- Próximo evento destacado -->
-      <div x-show="childEvents.length > 0" class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-lg p-6 text-white">
+      <div x-show="childEvents.length > 0" class="card" style="background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%); color: white; border: none;">
         <div class="flex items-center gap-4">
-          <div class="text-5xl" x-text="getEventIcon(childEvents[0].eventType || childEvents[0].event_type)"></div>
+          <div style="font-size: 3rem;" x-text="getEventIcon(childEvents[0].eventType || childEvents[0].event_type)"></div>
           <div>
-            <p class="text-sm opacity-90 mb-1">Próximo evento:</p>
-            <h3 class="text-2xl font-bold mb-1" x-text="childEvents[0].title"></h3>
-            <p class="text-lg" x-text="formatDate(childEvents[0].startTime || childEvents[0].start_time)"></p>
+            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px;">Próximo evento:</p>
+            <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 4px;" x-text="childEvents[0].title"></h3>
+            <p style="font-size: 1.1rem;" x-text="formatDate(childEvents[0].startTime || childEvents[0].start_time)"></p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Mensajes Tab -->
-    <div x-show="selectedTab === 'messages' && !loading" class="space-y-6">
-      <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h2 class="text-2xl font-bold mb-6 text-center text-pink-600 flex items-center justify-center gap-2">
+    <div x-show="selectedTab === 'messages' && !loading" x-cloak>
+      <div class="card">
+        <h2 class="card-title text-center" style="color: var(--color-terracotta); margin-bottom: 24px;">
           <span>💬</span>
           <span>Mensajes Importantes</span>
         </h2>
         
-        <div class="space-y-4">
+        <div>
           <template x-for="message in childMessages" :key="message.id">
-            <div class="border-2 border-pink-200 rounded-2xl p-5 bg-gradient-to-br from-pink-50 to-purple-50 transition-all hover:shadow-lg">
+            <div class="card card-compact mb-4" style="background: linear-gradient(135deg, rgba(196, 120, 94, 0.1) 0%, rgba(122, 158, 126, 0.1) 100%); border-color: var(--color-terracotta-light);">
               <div class="flex items-start gap-3 mb-3">
-                <span class="text-3xl" x-text="message.channelIcon"></span>
-                <div class="flex-1">
+                <span style="font-size: 2rem;" x-text="message.channelIcon"></span>
+                <div style="flex: 1;">
                   <div class="flex items-center justify-between mb-1">
-                    <p class="font-bold text-lg" x-text="message.senderEmail || message.sender_email"></p>
-                    <span class="text-xs px-2 py-1 bg-pink-200 rounded-full text-pink-800 font-semibold" x-text="message.channelName"></span>
+                    <p style="font-weight: 700; font-size: 1.1rem;" x-text="message.senderEmail || message.sender_email"></p>
+                    <span class="badge badge-primary" x-text="message.channelName"></span>
                   </div>
-                  <p class="text-xs text-gray-600 mb-3" x-text="formatTime(message.sentAt || message.sent_at)"></p>
+                  <p style="font-size: 0.75rem; color: var(--color-text-light); margin-bottom: 12px;" x-text="formatTime(message.sentAt || message.sent_at)"></p>
                 </div>
               </div>
-              <div class="bg-white rounded-xl p-4 border border-pink-100">
-                <p class="text-gray-800 whitespace-pre-wrap break-words" x-html="message.content"></p>
+              <div class="card card-compact" style="background: white; padding: 16px;">
+                <p style="white-space: pre-wrap; word-break: break-word;" x-html="message.content"></p>
               </div>
             </div>
           </template>
           
-          <div x-show="childMessages.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">💬</div>
-            <p class="text-xl font-semibold text-gray-700 mb-2">No hay mensajes compartidos</p>
-            <p class="text-gray-500">Cuando tus papás compartan algo contigo, aparecerá aquí.</p>
+          <div x-show="childMessages.length === 0" class="text-center" style="padding: 48px;">
+            <div style="font-size: 4rem; margin-bottom: 16px;">💬</div>
+            <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">No hay mensajes compartidos</p>
+            <p style="color: var(--color-text-light);">Cuando tus papás compartan algo contigo, aparecerá aquí.</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <footer class="text-center mt-8 pb-6">
-      <p class="text-gray-500 text-sm">
-        <span class="text-2xl">✨</span><br>
+    <footer class="text-center" style="margin-top: 32px; padding-bottom: 24px;">
+      <p style="color: var(--color-text-light); font-size: 0.9rem;">
+        <span style="font-size: 1.5rem;">✨</span><br>
         Hecho con cariño para ti
       </p>
     </footer>
   </div>
-
-  <style>
-    [x-cloak] { display: none !important; }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-  </style>
 </body>
 </html>

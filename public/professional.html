@@ -3,13 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vista Profesional - Talk to me nicely</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Vista Profesional - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .professional-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .tab-button {
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      background: var(--color-cream);
+      color: var(--color-text);
+    }
+    
+    .tab-button.active {
+      background: var(--color-sage);
+      color: white;
+    }
+    
+    .stat-card {
+      border-left: 4px solid;
+    }
+    
+    .stat-card.blue { border-left-color: var(--color-sage); }
+    .stat-card.green { border-left-color: var(--color-sage-dark); }
+    .stat-card.yellow { border-left-color: var(--color-terracotta); }
+    .stat-card.purple { border-left-color: var(--color-navy); }
+  </style>
   
   <script type="module">
     import { api } from '/js/api.js';
-    import { getCurrentUser } from '/js/auth.js';
+    import { getCurrentUser, logout as authLogout } from '/js/auth.js';
 
     window.professionalApp = function professionalApp() {
       return {
@@ -37,10 +70,22 @@
 
         async init() {
           const userResult = await getCurrentUser();
-          if (!userResult.success || userResult.user.role !== 'professional') {
+          if (!userResult.success) {
             window.location.href = '/login.html';
             return;
           }
+          
+          // Redirigir según el rol: solo los profesionales pueden ver esta vista
+          const userRole = userResult.user.role;
+          if (userRole !== 'professional') {
+            if (userRole === 'child') {
+              window.location.href = '/child-view.html';
+            } else {
+              window.location.href = '/dashboard.html';
+            }
+            return;
+          }
+          
           this.currentUserId = userResult.user.id;
           
           // Setear fechas por defecto (último mes)
@@ -272,127 +317,136 @@
           };
           return labels[eventType] || 'Otro';
         },
+
+        async logout() {
+          await authLogout();
+        },
       };
     };
   </script>
   
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
-  <div x-data="professionalApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+<body>
+  <div x-data="professionalApp()" x-init="init()" class="professional-container">
     <!-- Header -->
-    <header class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <header class="card mb-6">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-3xl font-bold text-purple-600 mb-1">👔 Vista Profesional</h1>
-          <p class="text-gray-600" x-show="family" x-text="'Familia: ' + (family?.name || 'Sin nombre')"></p>
+          <h1 style="font-size: 1.75rem; color: var(--color-navy); margin-bottom: 4px;">👔 Vista Profesional</h1>
+          <p style="color: var(--color-text-light); font-size: 0.9rem;" x-show="family" x-text="'Familia: ' + (family?.name || 'Sin nombre')"></p>
         </div>
-        <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
-          ← Dashboard
-        </a>
+        <button
+          @click="logout()"
+          class="btn btn-danger"
+        >
+          Cerrar Sesión
+        </button>
       </div>
     </header>
 
     <!-- Alertas -->
-    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+    <div x-show="error" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer;">
       <p x-text="error"></p>
     </div>
-    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+    <div x-show="success" x-cloak class="alert alert-success mb-4" @click="success = null" style="cursor: pointer;">
       <p x-text="success"></p>
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white rounded-xl shadow-lg p-2 mb-6 flex gap-2 overflow-x-auto">
-      <button
-        @click="selectedTab = 'overview'"
-        :class="selectedTab === 'overview' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
-      >
-        📊 Resumen
-      </button>
-      <button
-        @click="selectedTab = 'messages'"
-        :class="selectedTab === 'messages' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
-      >
-        💬 Mensajes
-      </button>
-      <button
-        @click="selectedTab = 'calendar'"
-        :class="selectedTab === 'calendar' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
-      >
-        📅 Calendario
-      </button>
-      <button
-        @click="selectedTab = 'reports'"
-        :class="selectedTab === 'reports' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
-      >
-        📋 Reportes
-      </button>
+    <div class="card card-compact mb-6">
+      <div class="flex gap-2" style="overflow-x: auto;">
+        <button
+          @click="selectedTab = 'overview'"
+          :class="selectedTab === 'overview' ? 'tab-button active' : 'tab-button'"
+          style="white-space: nowrap;"
+        >
+          📊 Resumen
+        </button>
+        <button
+          @click="selectedTab = 'messages'"
+          :class="selectedTab === 'messages' ? 'tab-button active' : 'tab-button'"
+          style="white-space: nowrap;"
+        >
+          💬 Mensajes
+        </button>
+        <button
+          @click="selectedTab = 'calendar'"
+          :class="selectedTab === 'calendar' ? 'tab-button active' : 'tab-button'"
+          style="white-space: nowrap;"
+        >
+          📅 Calendario
+        </button>
+        <button
+          @click="selectedTab = 'reports'"
+          :class="selectedTab === 'reports' ? 'tab-button active' : 'tab-button'"
+          style="white-space: nowrap;"
+        >
+          📋 Reportes
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
-    <div x-show="loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-      <p class="text-gray-600">Cargando datos...</p>
+    <div x-show="loading" class="text-center" style="padding: 48px;">
+      <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 16px;"></div>
+      <p style="color: var(--color-text-light);">Cargando datos...</p>
     </div>
 
     <!-- Overview Tab -->
-    <div x-show="selectedTab === 'overview' && !loading" class="space-y-6">
+    <div x-show="selectedTab === 'overview' && !loading" x-cloak>
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="card stat-card blue">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600 mb-1">Total Mensajes</p>
-              <p class="text-3xl font-bold text-gray-800" x-text="stats.totalMessages"></p>
+              <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 4px;">Total Mensajes</p>
+              <p style="font-size: 2rem; font-weight: 700;" x-text="stats.totalMessages"></p>
             </div>
-            <span class="text-4xl">💬</span>
+            <span style="font-size: 2.5rem;">💬</span>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+        <div class="card stat-card green">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600 mb-1">Total Eventos</p>
-              <p class="text-3xl font-bold text-gray-800" x-text="stats.totalEvents"></p>
+              <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 4px;">Total Eventos</p>
+              <p style="font-size: 2rem; font-weight: 700;" x-text="stats.totalEvents"></p>
             </div>
-            <span class="text-4xl">📅</span>
+            <span style="font-size: 2.5rem;">📅</span>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+        <div class="card stat-card yellow">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600 mb-1">Canales Activos</p>
-              <p class="text-3xl font-bold text-gray-800" x-text="stats.activeChannels"></p>
+              <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 4px;">Canales Activos</p>
+              <p style="font-size: 2rem; font-weight: 700;" x-text="stats.activeChannels"></p>
             </div>
-            <span class="text-4xl">📊</span>
+            <span style="font-size: 2.5rem;">📊</span>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+        <div class="card stat-card purple">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600 mb-1">Última Actividad</p>
-              <p class="text-sm font-semibold text-gray-800" x-text="stats.lastActivity"></p>
+              <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 4px;">Última Actividad</p>
+              <p style="font-size: 0.9rem; font-weight: 600;" x-text="stats.lastActivity"></p>
             </div>
-            <span class="text-4xl">🕐</span>
+            <span style="font-size: 2.5rem;">🕐</span>
           </div>
         </div>
       </div>
 
       <!-- Family Members -->
-      <div class="bg-white rounded-xl shadow-lg p-6" x-show="family">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">👨‍👩‍👧 Miembros de la Familia</h2>
+      <div class="card mb-6" x-show="family">
+        <h2 class="card-title">👨‍👩‍👧 Miembros de la Familia</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <template x-for="member in family?.members" :key="member.id">
-            <div class="border-2 border-gray-200 rounded-lg p-4">
-              <p class="font-semibold text-gray-800" x-text="member.display_name || member.email"></p>
-              <p class="text-sm text-gray-600 mt-1" x-text="member.role === 'parent' ? 'Padre/Madre' : member.role === 'child' ? 'Niño' : 'Profesional'"></p>
-              <p class="text-xs text-gray-500 mt-1" x-text="member.email"></p>
+            <div class="card card-compact">
+              <p style="font-weight: 600; margin-bottom: 4px;" x-text="member.display_name || member.email"></p>
+              <p style="font-size: 0.9rem; color: var(--color-text-light); margin-bottom: 4px;" x-text="member.role === 'parent' ? 'Padre/Madre' : member.role === 'child' ? 'Niño' : 'Profesional'"></p>
+              <p style="font-size: 0.75rem; color: var(--color-text-light);" x-text="member.email"></p>
             </div>
           </template>
         </div>
@@ -401,31 +455,31 @@
       <!-- Recent Activity -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Recent Messages -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold mb-4 text-gray-800">💬 Mensajes Recientes</h2>
-          <div class="space-y-3 max-h-96 overflow-y-auto">
+        <div class="card">
+          <h2 class="card-title">💬 Mensajes Recientes</h2>
+          <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
             <template x-for="message in messages.slice(0, 5)" :key="message.id">
-              <div class="border-l-4 border-blue-500 pl-4 py-2">
+              <div style="border-left: 4px solid var(--color-sage); padding-left: 16px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 8px;">
                 <div class="flex justify-between items-start mb-1">
-                  <p class="font-semibold text-sm" x-text="message.senderEmail || message.sender_email"></p>
-                  <span class="text-xs text-gray-500" x-text="formatTime(message.sentAt || message.sent_at)"></span>
+                  <p style="font-weight: 600; font-size: 0.85rem;" x-text="message.senderEmail || message.sender_email"></p>
+                  <span style="font-size: 0.75rem; color: var(--color-text-light);" x-text="formatTime(message.sentAt || message.sent_at)"></span>
                 </div>
-                <p class="text-sm text-gray-700 line-clamp-2" x-html="message.content"></p>
-                <p class="text-xs text-gray-500 mt-1" x-text="message.channelName"></p>
+                <p class="line-clamp-2" style="font-size: 0.85rem; margin-bottom: 4px;" x-html="message.content"></p>
+                <p style="font-size: 0.75rem; color: var(--color-text-light);" x-text="message.channelName"></p>
               </div>
             </template>
           </div>
         </div>
 
         <!-- Upcoming Events -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold mb-4 text-gray-800">📅 Próximos Eventos</h2>
-          <div class="space-y-3 max-h-96 overflow-y-auto">
+        <div class="card">
+          <h2 class="card-title">📅 Próximos Eventos</h2>
+          <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
             <template x-for="event in events.filter(e => (e.startTime || e.start_time) >= Math.floor(Date.now() / 1000)).slice(0, 5)" :key="event.id">
-              <div class="border-l-4 border-green-500 pl-4 py-2">
-                <p class="font-semibold text-sm" x-text="event.title"></p>
-                <p class="text-xs text-gray-600 mt-1" x-text="formatDate(event.startTime || event.start_time)"></p>
-                <p class="text-xs text-gray-500 mt-1" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
+              <div style="border-left: 4px solid var(--color-sage-dark); padding-left: 16px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 8px;">
+                <p style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;" x-text="event.title"></p>
+                <p style="font-size: 0.75rem; color: var(--color-text-light); margin-bottom: 4px;" x-text="formatDate(event.startTime || event.start_time)"></p>
+                <p style="font-size: 0.75rem; color: var(--color-text-light);" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
               </div>
             </template>
           </div>
@@ -434,13 +488,13 @@
     </div>
 
     <!-- Messages Tab -->
-    <div x-show="selectedTab === 'messages' && !loading" class="space-y-6">
+    <div x-show="selectedTab === 'messages' && !loading" x-cloak>
       <!-- Filters -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
+      <div class="card mb-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Canal</label>
-            <select x-model="selectedChannel" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+          <div class="form-group">
+            <label>Filtrar por Canal</label>
+            <select x-model="selectedChannel">
               <option value="all">Todos los canales</option>
               <option value="daily">💬 Cotidiano</option>
               <option value="health">🏥 Salud</option>
@@ -449,114 +503,106 @@
               <option value="vacation">🏖️ Vacaciones</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+          <div class="form-group">
+            <label>Buscar</label>
             <input
               type="text"
               x-model="searchQuery"
               placeholder="Buscar en mensajes..."
-              class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
             />
           </div>
         </div>
       </div>
 
       <!-- Messages List -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">💬 Mensajes (<span x-text="filteredMessages.length"></span>)</h2>
-        <div class="space-y-4 max-h-96 overflow-y-auto">
+      <div class="card">
+        <h2 class="card-title">💬 Mensajes (<span x-text="filteredMessages.length"></span>)</h2>
+        <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
           <template x-for="message in filteredMessages" :key="message.id">
-            <div class="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+            <div class="card card-compact mb-4" style="border-color: var(--color-border);">
               <div class="flex justify-between items-start mb-2">
                 <div class="flex items-center gap-3">
-                  <span class="text-2xl" x-text="message.channelIcon"></span>
+                  <span style="font-size: 1.5rem;" x-text="message.channelIcon"></span>
                   <div>
-                    <p class="font-semibold text-gray-800" x-text="message.senderEmail || message.sender_email"></p>
-                    <p class="text-xs text-gray-500" x-text="message.channelName"></p>
+                    <p style="font-weight: 600; font-size: 0.9rem; margin-bottom: 2px;" x-text="message.senderEmail || message.sender_email"></p>
+                    <p style="font-size: 0.75rem; color: var(--color-text-light);" x-text="message.channelName"></p>
                   </div>
                 </div>
-                <span class="text-xs text-gray-500" x-text="formatDate(message.sentAt || message.sent_at)"></span>
+                <span style="font-size: 0.75rem; color: var(--color-text-light);" x-text="formatDate(message.sentAt || message.sent_at)"></span>
               </div>
-              <p class="text-sm text-gray-700 whitespace-pre-wrap break-words mt-2" x-html="message.content"></p>
-              <div class="flex gap-2 mt-2 text-xs text-gray-500">
+              <p style="font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; margin-top: 8px;" x-html="message.content"></p>
+              <div class="flex gap-2 mt-2" style="font-size: 0.75rem; color: var(--color-text-light);">
                 <span x-show="message.isRead || message.read_at">✓ Leído</span>
                 <span x-show="message.shareWithChild || message.share_with_child">👶 Compartido con niño</span>
               </div>
             </div>
           </template>
           
-          <div x-show="filteredMessages.length === 0" class="text-center py-12 text-gray-500">
-            <p class="text-lg">No hay mensajes que coincidan con los filtros</p>
+          <div x-show="filteredMessages.length === 0" class="text-center" style="padding: 48px; color: var(--color-text-light);">
+            <p style="font-size: 1.1rem;">No hay mensajes que coincidan con los filtros</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Calendar Tab -->
-    <div x-show="selectedTab === 'calendar' && !loading" class="space-y-6">
+    <div x-show="selectedTab === 'calendar' && !loading" x-cloak>
       <!-- Search -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Buscar eventos</label>
-        <input
-          type="text"
-          x-model="searchQuery"
-          placeholder="Buscar en eventos..."
-          class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
-        />
+      <div class="card mb-6">
+        <div class="form-group">
+          <label>Buscar eventos</label>
+          <input
+            type="text"
+            x-model="searchQuery"
+            placeholder="Buscar en eventos..."
+          />
+        </div>
       </div>
 
       <!-- Events List -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">📅 Eventos (<span x-text="filteredEvents.length"></span>)</h2>
-        <div class="space-y-4 max-h-96 overflow-y-auto">
+      <div class="card">
+        <h2 class="card-title">📅 Eventos (<span x-text="filteredEvents.length"></span>)</h2>
+        <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
           <template x-for="event in filteredEvents" :key="event.id">
-            <div class="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+            <div class="card card-compact mb-4" style="border-color: var(--color-border);">
               <div class="flex items-start gap-4">
-                <span class="text-4xl" x-text="getEventIcon(event.eventType || event.event_type)"></span>
-                <div class="flex-1">
+                <span style="font-size: 2.5rem;" x-text="getEventIcon(event.eventType || event.event_type)"></span>
+                <div style="flex: 1;">
                   <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-bold text-lg text-gray-800" x-text="event.title"></h3>
-                    <span class="text-xs px-3 py-1 bg-purple-100 text-purple-800 rounded-full" x-text="getEventTypeLabel(event.eventType || event.event_type)"></span>
+                    <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;" x-text="event.title"></h3>
+                    <span class="badge badge-primary" x-text="getEventTypeLabel(event.eventType || event.event_type)"></span>
                   </div>
-                  <p class="text-sm text-gray-600 mb-1" x-text="formatDate(event.startTime || event.start_time)"></p>
-                  <p x-show="event.description" class="text-sm text-gray-700 mt-2" x-text="event.description"></p>
+                  <p style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 4px;" x-text="formatDate(event.startTime || event.start_time)"></p>
+                  <p x-show="event.description" style="font-size: 0.85rem; margin-top: 8px;" x-text="event.description"></p>
                 </div>
               </div>
             </div>
           </template>
           
-          <div x-show="filteredEvents.length === 0" class="text-center py-12 text-gray-500">
-            <p class="text-lg">No hay eventos que coincidan con la búsqueda</p>
+          <div x-show="filteredEvents.length === 0" class="text-center" style="padding: 48px; color: var(--color-text-light);">
+            <p style="font-size: 1.1rem;">No hay eventos que coincidan con la búsqueda</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Reports Tab -->
-    <div x-show="selectedTab === 'reports' && !loading" class="space-y-6">
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <h2 class="text-2xl font-bold mb-6 text-gray-800">📋 Generar Reporte</h2>
+    <div x-show="selectedTab === 'reports' && !loading" x-cloak>
+      <div class="card">
+        <h2 class="card-title" style="font-size: 1.5rem; margin-bottom: 24px;">📋 Generar Reporte</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio *</label>
-            <input
-              type="date"
-              x-model="reportStart"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
-            />
+          <div class="form-group">
+            <label>Fecha Inicio *</label>
+            <input type="date" x-model="reportStart" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin *</label>
-            <input
-              type="date"
-              x-model="reportEnd"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
-            />
+          <div class="form-group">
+            <label>Fecha Fin *</label>
+            <input type="date" x-model="reportEnd" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte *</label>
-            <select x-model="reportType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+          <div class="form-group">
+            <label>Tipo de Reporte *</label>
+            <select x-model="reportType">
               <option value="messages">Mensajes</option>
               <option value="calendar">Calendario</option>
               <option value="all">Todos</option>
@@ -567,52 +613,34 @@
         <button
           @click="generateReport()"
           :disabled="loading || !reportStart || !reportEnd"
-          class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold mb-6"
+          class="btn btn-primary w-full mb-6"
+          style="justify-content: center;"
         >
           <span x-show="!loading">📊 Generar Reporte</span>
-          <span x-show="loading" class="flex items-center justify-center">
-            <span class="animate-spin mr-2">⏳</span>
+          <span x-show="loading" class="flex items-center" style="justify-content: center;">
+            <span class="spinner" style="margin-right: 8px;"></span>
             Generando...
           </span>
         </button>
 
-        <div x-show="reportData" class="border-2 border-purple-200 rounded-lg p-6 bg-purple-50">
+        <div x-show="reportData" class="card" style="background: rgba(122, 158, 126, 0.1); border-color: var(--color-sage-light);">
           <div class="flex justify-between items-start mb-4">
-            <h3 class="text-lg font-bold text-purple-800">Reporte Generado</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--color-sage-dark);">Reporte Generado</h3>
             <div class="flex gap-2">
               <button
                 @click="downloadReport('json')"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                class="btn btn-primary"
               >
                 📥 Descargar JSON
               </button>
             </div>
           </div>
-          <div class="bg-white rounded-lg p-4 max-h-96 overflow-auto">
-            <pre class="text-xs text-gray-700 whitespace-pre-wrap" x-text="JSON.stringify(reportData, null, 2)"></pre>
+          <div class="card card-compact custom-scrollbar" style="background: white; max-height: 400px; overflow-y: auto;">
+            <pre style="font-size: 0.75rem; white-space: pre-wrap;" x-text="JSON.stringify(reportData, null, 2)"></pre>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-  <style>
-    [x-cloak] { display: none !important; }
-    
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-  </style>
 </body>
 </html>

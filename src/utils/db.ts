@@ -194,9 +194,11 @@ export async function executeQuery<T = unknown>(
   query: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const stmt = db.prepare(query);
+  let stmt = db.prepare(query);
   if (params.length > 0) {
-    stmt.bind(...params);
+    // Normalize undefined values to null for D1 compatibility
+    const normalizedParams = params.map(param => param === undefined ? null : param);
+    stmt = stmt.bind(...normalizedParams);
   }
   const result = await stmt.all<T>();
   if (!result.success) {
@@ -213,9 +215,11 @@ export async function executeQueryFirst<T = unknown>(
   query: string,
   params: unknown[] = []
 ): Promise<T | null> {
-  const stmt = db.prepare(query);
+  let stmt = db.prepare(query);
   if (params.length > 0) {
-    stmt.bind(...params);
+    // Normalize undefined values to null for D1 compatibility
+    const normalizedParams = params.map(param => param === undefined ? null : param);
+    stmt = stmt.bind(...normalizedParams);
   }
   return await stmt.first<T>();
 }
@@ -228,9 +232,11 @@ export async function executeMutation(
   query: string,
   params: unknown[] = []
 ): Promise<{ success: boolean; lastInsertRowid?: number; changes?: number }> {
-  const stmt = db.prepare(query);
+  let stmt = db.prepare(query);
   if (params.length > 0) {
-    stmt.bind(...params);
+    // Normalize undefined values to null for D1 compatibility
+    const normalizedParams = params.map(param => param === undefined ? null : param);
+    stmt = stmt.bind(...normalizedParams);
   }
   const result = await stmt.run();
   return {

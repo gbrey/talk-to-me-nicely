@@ -3,9 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendario - Talk to me nicely</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Calendario - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .calendar-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .calendar-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    
+    .calendar-day {
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      min-height: 100px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .calendar-day:hover {
+      background: var(--color-cream);
+    }
+    
+    .calendar-day.other-month {
+      background: var(--color-cream);
+      opacity: 0.5;
+    }
+    
+    .calendar-day.today {
+      border-color: var(--color-sage);
+      background: rgba(122, 158, 126, 0.1);
+    }
+    
+    .event-badge {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 4px;
+      border: 1px solid;
+    }
+    
+    @media (max-width: 1024px) {
+      .calendar-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
   
   <script type="module">
     import { api } from '/js/api.js';
@@ -229,12 +285,12 @@
 
         getEventColor(eventType) {
           const colors = {
-            pickup: 'bg-blue-100 text-blue-800 border-blue-300',
-            dropoff: 'bg-green-100 text-green-800 border-green-300',
-            medical: 'bg-red-100 text-red-800 border-red-300',
-            school: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-            vacation: 'bg-purple-100 text-purple-800 border-purple-300',
-            other: 'bg-gray-100 text-gray-800 border-gray-300',
+            pickup: 'background: rgba(122, 158, 126, 0.2); color: var(--color-sage-dark); border-color: var(--color-sage-light);',
+            dropoff: 'background: rgba(122, 158, 126, 0.15); color: var(--color-sage-dark); border-color: var(--color-sage);',
+            medical: 'background: rgba(196, 120, 94, 0.2); color: var(--color-terracotta); border-color: var(--color-terracotta-light);',
+            school: 'background: rgba(255, 193, 7, 0.2); color: #F57C00; border-color: #FFC107;',
+            vacation: 'background: rgba(156, 39, 176, 0.2); color: #7B1FA2; border-color: #9C27B0;',
+            other: 'background: var(--color-cream); color: var(--color-text); border-color: var(--color-border);',
           };
           return colors[eventType] || colors.other;
         },
@@ -284,85 +340,82 @@
   
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen">
-  <div x-data="calendarApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+<body>
+  <div x-data="calendarApp()" x-init="init()" class="calendar-container">
     <!-- Header -->
-    <header class="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
-      <div>
-        <h1 class="text-3xl font-bold text-green-600 mb-1">Calendario</h1>
-        <p class="text-gray-600" x-text="events.length + ' eventos'"></p>
-      </div>
-      <div class="flex gap-4">
-        <button
-          @click="openEventModal()"
-          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-semibold flex items-center gap-2"
-        >
-          <span>➕</span>
-          <span>Nuevo Evento</span>
-        </button>
-        <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
-          ← Dashboard
-        </a>
+    <header class="card mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 style="margin-bottom: 4px;">Calendario</h1>
+          <p style="color: var(--color-text-light); font-size: 0.9rem;" x-text="events.length + ' eventos'"></p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            @click="openEventModal()"
+            class="btn btn-primary"
+          >
+            <span>➕</span>
+            <span>Nuevo Evento</span>
+          </button>
+          <a href="/dashboard.html" class="btn btn-secondary">
+            ← Dashboard
+          </a>
+        </div>
       </div>
     </header>
 
     <!-- Alertas -->
-    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+    <div x-show="error" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer;">
       <p x-text="error"></p>
     </div>
-    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+    <div x-show="success" x-cloak class="alert alert-success mb-4" @click="success = null" style="cursor: pointer;">
       <p x-text="success"></p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="calendar-layout">
       <!-- Calendario -->
-      <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
-        <div class="mb-6 flex justify-between items-center">
+      <div class="card">
+        <div class="flex justify-between items-center mb-6">
           <div class="flex gap-3">
-            <button @click="previousMonth()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-semibold">
-              ←
-            </button>
-            <button @click="goToToday()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors font-semibold">
-              Hoy
-            </button>
-            <button @click="nextMonth()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-semibold">
-              →
-            </button>
+            <button @click="previousMonth()" class="btn btn-secondary">←</button>
+            <button @click="goToToday()" class="btn btn-primary">Hoy</button>
+            <button @click="nextMonth()" class="btn btn-secondary">→</button>
           </div>
-          <h2 class="text-2xl font-bold capitalize" x-text="currentMonthYear"></h2>
+          <h2 style="font-size: 1.5rem; text-transform: capitalize;" x-text="currentMonthYear"></h2>
         </div>
 
         <!-- Grid de calendario -->
-        <div class="grid grid-cols-7 gap-2">
+        <div class="calendar-grid">
           <template x-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">
-            <div class="text-center font-bold text-gray-700 py-3 text-sm" x-text="day"></div>
+            <div style="text-align: center; font-weight: 600; padding: 12px; font-size: 0.85rem; color: var(--color-text);" x-text="day"></div>
           </template>
           <template x-for="day in calendarDays" :key="day.date">
             <div
-              class="border-2 rounded-xl p-2 min-h-24 cursor-pointer hover:bg-gray-50 transition-colors"
+              class="calendar-day"
               :class="[
-                day.isCurrentMonth ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100',
-                day.isToday ? 'border-green-500 bg-green-50' : ''
+                !day.isCurrentMonth ? 'other-month' : '',
+                day.isToday ? 'today' : ''
               ]"
               @click="day.events.length > 0 && openEventModal(day.events[0])"
             >
               <div class="flex justify-between items-start mb-1">
                 <div 
-                  class="text-sm font-semibold px-2 py-1 rounded"
-                  :class="day.isToday ? 'bg-green-600 text-white' : day.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'"
+                  style="font-size: 0.9rem; font-weight: 600; padding: 4px 8px; border-radius: var(--radius-sm);"
+                  :style="day.isToday ? 'background: var(--color-sage); color: white;' : day.isCurrentMonth ? 'color: var(--color-text);' : 'color: var(--color-text-light);'"
                   x-text="day.day"
                 ></div>
-                <span x-show="day.events.length > 0" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold" x-text="day.events.length"></span>
+                <span x-show="day.events.length > 0" class="badge badge-primary" x-text="day.events.length"></span>
               </div>
-              <div class="space-y-1">
+              <div>
                 <template x-for="event in day.events.slice(0, 2)" :key="event.id">
                   <div
-                    class="text-xs p-1 rounded truncate border"
-                    :class="getEventColor(event.eventType || event.event_type)"
+                    class="event-badge"
+                    :style="getEventColor(event.eventType || event.event_type)"
+                    style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                     x-text="getEventIcon(event.eventType || event.event_type) + ' ' + event.title"
                   ></div>
                 </template>
-                <div x-show="day.events.length > 2" class="text-xs text-gray-500 px-1">
+                <div x-show="day.events.length > 2" style="font-size: 0.75rem; color: var(--color-text-light); padding: 4px;">
                   +<span x-text="day.events.length - 2"></span> más
                 </div>
               </div>
@@ -372,70 +425,70 @@
       </div>
 
       <!-- Panel lateral -->
-      <div class="space-y-6">
+      <div style="display: flex; flex-direction: column; gap: 24px;">
         <!-- Eventos Próximos -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold mb-4 text-gray-800">Próximos Eventos</h2>
-          <div class="space-y-3">
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 16px;">Próximos Eventos</h2>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
             <template x-for="event in upcomingEvents" :key="event.id">
-              <div class="border-2 border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer" @click="openEventModal(event)">
+              <div class="card card-compact" style="cursor: pointer; padding: 16px;" @click="openEventModal(event)">
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex items-center gap-2">
-                    <span class="text-2xl" x-text="getEventIcon(event.eventType || event.event_type)"></span>
+                    <span style="font-size: 1.5rem;" x-text="getEventIcon(event.eventType || event.event_type)"></span>
                     <div>
-                      <h3 class="font-semibold text-gray-800" x-text="event.title"></h3>
-                      <p class="text-xs text-gray-500" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
+                      <h3 style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;" x-text="event.title"></h3>
+                      <p style="font-size: 0.75rem; color: var(--color-text-light);" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
                     </div>
                   </div>
                   <button
                     @click.stop="deleteEvent(event.id)"
-                    class="text-red-500 hover:text-red-700 text-lg"
+                    style="color: var(--color-terracotta); font-size: 1.1rem; background: none; border: none; cursor: pointer; padding: 4px;"
                     title="Eliminar evento"
                   >
                     🗑️
                   </button>
                 </div>
-                <p class="text-sm text-gray-600 mt-2">
-                  <span class="font-medium">📅</span>
+                <p style="font-size: 0.85rem; color: var(--color-text-light); margin-top: 8px;">
+                  <span style="font-weight: 500;">📅</span>
                   <span x-text="formatDate(event.startTime || event.start_time)"></span>
                 </p>
-                <p x-show="event.description" class="text-sm text-gray-500 mt-2 line-clamp-2" x-text="event.description"></p>
+                <p x-show="event.description" class="line-clamp-2" style="font-size: 0.85rem; color: var(--color-text-light); margin-top: 8px;" x-text="event.description"></p>
               </div>
             </template>
-            <div x-show="upcomingEvents.length === 0" class="text-center py-8 text-gray-500">
-              <div class="text-4xl mb-2">📅</div>
-              <p class="text-sm">No hay eventos próximos</p>
+            <div x-show="upcomingEvents.length === 0" class="text-center" style="padding: 32px; color: var(--color-text-light);">
+              <div style="font-size: 3rem; margin-bottom: 8px;">📅</div>
+              <p style="font-size: 0.9rem;">No hay eventos próximos</p>
             </div>
           </div>
         </div>
 
         <!-- Leyenda -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold mb-4 text-gray-800">Leyenda</h2>
-          <div class="space-y-2 text-sm">
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 16px;">Leyenda</h2>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem;">
             <div class="flex items-center gap-2">
-              <span class="text-lg">🚗</span>
-              <span class="text-gray-700">Retiro</span>
+              <span style="font-size: 1.1rem;">🚗</span>
+              <span>Retiro</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-lg">📍</span>
-              <span class="text-gray-700">Entrega</span>
+              <span style="font-size: 1.1rem;">📍</span>
+              <span>Entrega</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-lg">🏥</span>
-              <span class="text-gray-700">Cita Médica</span>
+              <span style="font-size: 1.1rem;">🏥</span>
+              <span>Cita Médica</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-lg">📚</span>
-              <span class="text-gray-700">Evento Escolar</span>
+              <span style="font-size: 1.1rem;">📚</span>
+              <span>Evento Escolar</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-lg">🏖️</span>
-              <span class="text-gray-700">Vacaciones</span>
+              <span style="font-size: 1.1rem;">🏖️</span>
+              <span>Vacaciones</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-lg">📅</span>
-              <span class="text-gray-700">Otro</span>
+              <span style="font-size: 1.1rem;">📅</span>
+              <span>Otro</span>
             </div>
           </div>
         </div>
@@ -446,24 +499,25 @@
     <div
       x-show="showEventModal"
       x-cloak
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="modal-overlay"
       @click.self="showEventModal = false"
     >
-      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
-        <h3 class="text-2xl font-bold mb-6" x-text="selectedEvent ? 'Editar Evento' : 'Nuevo Evento'"></h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Título *</label>
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" x-text="selectedEvent ? 'Editar Evento' : 'Nuevo Evento'"></h3>
+        </div>
+        <div>
+          <div class="form-group">
+            <label>Título *</label>
             <input
               type="text"
               x-model="newEvent.title"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
               placeholder="Ej: Retiro en la escuela"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-            <select x-model="newEvent.eventType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select x-model="newEvent.eventType">
               <option value="pickup">🚗 Retiro</option>
               <option value="dropoff">📍 Entrega</option>
               <option value="medical">🏥 Cita Médica</option>
@@ -472,34 +526,34 @@
               <option value="other">📅 Otro</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha y Hora *</label>
+          <div class="form-group">
+            <label>Fecha y Hora *</label>
             <input
               type="datetime-local"
               x-model="newEvent.startTime"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Descripción (opcional)</label>
+          <div class="form-group">
+            <label>Descripción (opcional)</label>
             <textarea
               x-model="newEvent.description"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none resize-none"
               rows="3"
               placeholder="Notas adicionales..."
+              style="resize: none;"
             ></textarea>
           </div>
-          <div class="flex gap-3 pt-4">
+          <div class="flex gap-3">
             <button
               @click="createEvent()"
               :disabled="loading || !newEvent.title || !newEvent.startTime"
-              class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              class="btn btn-primary"
+              style="flex: 1; justify-content: center;"
             >
               <span x-text="selectedEvent ? 'Guardar Cambios' : 'Crear Evento'"></span>
             </button>
             <button
               @click="showEventModal = false; selectedEvent = null"
-              class="bg-gray-200 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              class="btn btn-secondary"
             >
               Cancelar
             </button>
@@ -508,9 +562,5 @@
       </div>
     </div>
   </div>
-
-  <style>
-    [x-cloak] { display: none !important; }
-  </style>
 </body>
 </html>

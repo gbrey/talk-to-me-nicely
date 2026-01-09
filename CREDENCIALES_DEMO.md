@@ -131,7 +131,27 @@ fetch('/api/seed', { method: 'POST' })
 
 ## ⚠️ Notas Importantes
 
-- Todos los passwords están hasheados correctamente
+### Estado Actual de la Base de Datos Local
+- **Usuarios del seed estándar**: 7 usuarios (4 padres, 2 hijos, 1 profesional)
+- **✅ Passwords actualizados**: Todos los usuarios tienen hashes correctos y funcionan para login
+- **Passwords en seed SQL**: Usa `temp_hash` y `temp_salt` (NO funcionan - requieren actualización)
+- **Passwords en seed TypeScript**: Usa hashes correctos (SÍ funcionan para login)
+
+### Credenciales Válidas para Login
+- **Padres**: `Password123` para todos los padres
+- **Niños**: `1234` para todos los niños  
+- **Profesional**: `Password123` para el abogado
+
+### Actualizar Passwords (si se ejecuta seed SQL)
+Si necesitas actualizar passwords después de ejecutar el seed SQL:
+```bash
+npx tsx scripts/update-passwords-local.ts
+# Luego ejecuta las queries SQL generadas en la base de datos local
+```
+
+### Usuarios en la Base de Datos
+- ✅ Todos los usuarios tienen passwords válidos y funcionan para login
 - Todos los usuarios tienen email verificado
 - Los datos se pueden ejecutar múltiples veces (usa INSERT OR IGNORE)
 - Para limpiar datos, elimina `.wrangler/state/v3/d1` y vuelve a ejecutar migraciones
+- Nota: Hay un usuario adicional `gusbrey@gmail.com` en la base local (creado manualmente)

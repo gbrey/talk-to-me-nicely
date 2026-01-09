@@ -4,9 +4,9 @@
   "description": "Co-parenting app for high-conflict situations",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev public --d1=DB --r2=BUCKET",
+    "dev": "wrangler pages dev public --d1 DB --r2 BUCKET",
     "deploy": "wrangler pages deploy public",
-    "migrate": "wrangler d1 migrations apply DB"
+    "migrate": "wrangler d1 migrations apply DB --local"
   },
   "keywords": [
     "coparenting",

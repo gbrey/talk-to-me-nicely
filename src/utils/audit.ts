@@ -4,6 +4,7 @@
 
 import type { D1Database } from './db';
 import { getCurrentTimestamp } from './timestamps';
+import { executeMutation } from './db';
 
 export interface AuditLogEntry {
   familyId?: string;
@@ -11,7 +12,7 @@ export interface AuditLogEntry {
   action: string;
   entityType: string;
   entityId?: string;
-  details?: string;
+  details?: string | Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -26,24 +27,30 @@ export async function logAudit(
   const id = crypto.randomUUID();
   const timestamp = getCurrentTimestamp();
 
-  await db
-    .prepare(
-      `INSERT INTO audit_log (id, family_id, user_id, action, entity_type, entity_id, details, ip_address, user_agent, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
+  // Handle details: if it's an object, stringify it; if it's a string, use it directly; if undefined, use null
+  const detailsValue = entry.details === undefined 
+    ? null 
+    : typeof entry.details === 'string' 
+      ? entry.details 
+      : JSON.stringify(entry.details);
+
+  await executeMutation(
+    db,
+    `INSERT INTO audit_log (id, family_id, user_id, action, entity_type, entity_id, details, ip_address, user_agent, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       id,
-      entry.familyId || null,
-      entry.userId || null,
+      entry.familyId ?? null,
+      entry.userId ?? null,
       entry.action,
       entry.entityType,
-      entry.entityId || null,
-      entry.details ? JSON.stringify(entry.details) : null,
-      entry.ipAddress || null,
-      entry.userAgent || null,
+      entry.entityId ?? null,
+      detailsValue,
+      entry.ipAddress ?? null,
+      entry.userAgent ?? null,
       timestamp
-    )
-    .run();
+    ]
+  );
 }
 
 /**

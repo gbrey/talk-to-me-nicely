@@ -3,9 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Talk to me nicely</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Dashboard - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .dashboard-header {
+      margin-bottom: 32px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+    
+    .invite-button {
+      width: 100%;
+      padding: 16px;
+      text-align: left;
+      background: var(--color-cream);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .invite-button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+      border-color: var(--color-sage);
+    }
+    
+    .invite-button.parent {
+      background: rgba(122, 158, 126, 0.1);
+      border-color: var(--color-sage-light);
+    }
+    
+    .invite-button.child {
+      background: rgba(255, 193, 7, 0.1);
+      border-color: #FFC107;
+    }
+    
+    .invite-button.professional {
+      background: rgba(156, 39, 176, 0.1);
+      border-color: #9C27B0;
+    }
+    
+    .nav-card {
+      padding: 24px;
+      text-align: center;
+      background: var(--color-cream);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .nav-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-medium);
+      border-color: var(--color-sage);
+    }
+    
+    .badge-role {
+      padding: 4px 8px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge-role.parent {
+      background: rgba(122, 158, 126, 0.2);
+      color: var(--color-sage-dark);
+    }
+    
+    .badge-role.child {
+      background: rgba(255, 193, 7, 0.2);
+      color: #F57C00;
+    }
+    
+    .badge-role.professional {
+      background: rgba(156, 39, 176, 0.2);
+      color: #7B1FA2;
+    }
+    
+    .code-input {
+      text-align: center;
+      font-size: 1.5rem;
+      font-family: monospace;
+      letter-spacing: 0.5em;
+      padding: 16px;
+    }
+  </style>
   
   <script type="module">
     import { api } from '/js/api.js';
@@ -39,6 +148,17 @@
             return;
           }
           this.user = userResult.user;
+          
+          // Redirigir según el rol: solo los padres pueden ver el dashboard
+          if (this.user.role === 'child') {
+            window.location.href = '/child-view.html';
+            return;
+          }
+          if (this.user.role === 'professional') {
+            window.location.href = '/professional.html';
+            return;
+          }
+          
           await this.loadFamily();
           if (this.currentFamily) {
             await this.loadStats();
@@ -217,18 +337,21 @@
   
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-  <div x-data="dashboardApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+<body>
+  <div x-data="dashboardApp()" x-init="init()" class="dashboard-container">
     <!-- Header -->
-    <header class="bg-white rounded-xl shadow-lg p-6 mb-8">
+    <header class="card dashboard-header">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-3xl font-bold text-blue-600 mb-1">Talk to me nicely</h1>
-          <p class="text-gray-600" x-text="user?.email"></p>
+          <div class="logo" style="margin-bottom: 8px;">
+            <div class="logo-icon">💬</div>
+            <span class="logo-text">Hablemos Bien</span>
+          </div>
+          <p style="color: var(--color-text-light); font-size: 0.9rem;" x-text="user?.email"></p>
         </div>
         <button
           @click="logout()"
-          class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md"
+          class="btn btn-danger"
         >
           Cerrar Sesión
         </button>
@@ -236,22 +359,22 @@
     </header>
 
     <!-- Alertas -->
-    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+    <div x-show="error" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer;">
       <p x-text="error"></p>
     </div>
-    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+    <div x-show="success" x-cloak class="alert alert-success mb-4" @click="success = null" style="cursor: pointer;">
       <p x-text="success"></p>
     </div>
 
     <!-- Sin Familia -->
-    <div x-show="!currentFamily" class="bg-white rounded-xl shadow-lg p-8 text-center">
-      <div class="max-w-md mx-auto">
-        <div class="text-6xl mb-4">👨‍👩‍👧</div>
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Crea tu Familia</h2>
-        <p class="text-gray-600 mb-6">Comienza creando una familia para organizar la comunicación y el calendario compartido.</p>
+    <div x-show="!currentFamily" class="card text-center">
+      <div style="max-width: 400px; margin: 0 auto;">
+        <div style="font-size: 4rem; margin-bottom: 16px;">👨‍👩‍👧</div>
+        <h2 class="card-title" style="margin-bottom: 16px;">Crea tu Familia</h2>
+        <p style="margin-bottom: 24px;">Comienza creando una familia para organizar la comunicación y el calendario compartido.</p>
         <button
           @click="showCreateFamily = true"
-          class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md text-lg font-semibold"
+          class="btn btn-primary btn-large"
         >
           Crear Familia
         </button>
@@ -261,179 +384,166 @@
     <!-- Con Familia -->
     <div x-show="currentFamily">
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="stats-grid">
         <!-- Familia Info Card -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="card">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Mi Familia</h3>
-            <span class="text-3xl">👨‍👩‍👧</span>
+            <h3 class="card-title" style="margin-bottom: 0;">Mi Familia</h3>
+            <span style="font-size: 2rem;">👨‍👩‍👧</span>
           </div>
-          <h4 class="text-xl font-semibold text-blue-600 mb-2" x-text="currentFamily?.name || 'Familia'"></h4>
-          <p class="text-sm text-gray-600 mb-4" x-text="currentFamily?.members?.length + ' miembros'"></p>
-          <div class="space-y-2">
+          <h4 style="font-size: 1.25rem; color: var(--color-sage-dark); margin-bottom: 8px;" x-text="currentFamily?.name || 'Familia'"></h4>
+          <p style="font-size: 0.9rem; margin-bottom: 16px;" x-text="currentFamily?.members?.length + ' miembros'"></p>
+          <div>
             <template x-for="member in currentFamily?.members" :key="member.id">
-              <div class="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                <div>
-                  <span class="font-medium" x-text="member.display_name || member.email"></span>
-                  <span class="text-gray-500 ml-2" x-text="getRoleLabel(member.role)"></span>
+              <div class="stat-item">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span style="font-weight: 500;" x-text="member.display_name || member.email"></span>
+                    <span style="color: var(--color-text-light); margin-left: 8px;" x-text="getRoleLabel(member.role)"></span>
+                  </div>
+                  <span class="badge-role" 
+                    :class="member.role"
+                    x-text="member.role === 'parent' ? 'Padre' : member.role === 'child' ? 'Niño' : 'Profesional'"></span>
                 </div>
-                <span class="text-xs px-2 py-1 rounded"
-                  :class="{
-                    'bg-blue-100 text-blue-800': member.role === 'parent',
-                    'bg-yellow-100 text-yellow-800': member.role === 'child',
-                    'bg-purple-100 text-purple-800': member.role === 'professional'
-                  }"
-                  x-text="member.role === 'parent' ? 'Padre' : member.role === 'child' ? 'Niño' : 'Profesional'"></span>
               </div>
             </template>
           </div>
         </div>
 
         <!-- Mensajes Recientes Card -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="card">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Mensajes Recientes</h3>
-            <a href="/messages.html" class="text-blue-600 hover:underline text-sm">Ver todos →</a>
+            <h3 class="card-title" style="margin-bottom: 0;">Mensajes Recientes</h3>
+            <a href="/messages.html" style="color: var(--color-sage-dark); text-decoration: none; font-size: 0.9rem;">Ver todos →</a>
           </div>
-          <div class="space-y-2" x-show="recentMessages.length > 0">
+          <div x-show="recentMessages.length > 0">
             <template x-for="msg in recentMessages" :key="msg.id">
-              <div class="text-sm p-2 bg-gray-50 rounded">
-                <p class="font-medium text-gray-800" x-text="msg.sender_email || msg.senderEmail"></p>
-                <p class="text-gray-600 truncate" x-text="msg.content"></p>
+              <div style="padding: 8px; background: var(--color-cream); border-radius: var(--radius-sm); margin-bottom: 8px;">
+                <p style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px;" x-text="msg.sender_email || msg.senderEmail"></p>
+                <p style="font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="msg.content"></p>
               </div>
             </template>
           </div>
-          <p x-show="recentMessages.length === 0" class="text-gray-500 text-sm">No hay mensajes recientes</p>
+          <p x-show="recentMessages.length === 0" style="color: var(--color-text-light); font-size: 0.9rem;">No hay mensajes recientes</p>
         </div>
 
         <!-- Eventos Próximos Card -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="card">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Eventos Próximos</h3>
-            <a href="/calendar.html" class="text-blue-600 hover:underline text-sm">Ver calendario →</a>
+            <h3 class="card-title" style="margin-bottom: 0;">Eventos Próximos</h3>
+            <a href="/calendar.html" style="color: var(--color-sage-dark); text-decoration: none; font-size: 0.9rem;">Ver calendario →</a>
           </div>
-          <div class="space-y-2" x-show="upcomingEvents.length > 0">
+          <div x-show="upcomingEvents.length > 0">
             <template x-for="event in upcomingEvents" :key="event.id">
-              <div class="text-sm p-2 bg-gray-50 rounded">
-                <p class="font-medium text-gray-800" x-text="event.title"></p>
-                <p class="text-gray-600" x-text="formatDate(event.startTime || event.start_time)"></p>
+              <div style="padding: 8px; background: var(--color-cream); border-radius: var(--radius-sm); margin-bottom: 8px;">
+                <p style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px;" x-text="event.title"></p>
+                <p style="font-size: 0.85rem;" x-text="formatDate(event.startTime || event.start_time)"></p>
               </div>
             </template>
           </div>
-          <p x-show="upcomingEvents.length === 0" class="text-gray-500 text-sm">No hay eventos próximos</p>
+          <p x-show="upcomingEvents.length === 0" style="color: var(--color-text-light); font-size: 0.9rem;">No hay eventos próximos</p>
+        </div>
+      </div>
+
+      <!-- Navegación Rápida -->
+      <div class="card mb-8">
+        <h3 class="card-title" style="margin-bottom: 24px;">Navegación Rápida</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <a href="/messages.html" class="nav-card">
+            <span style="font-size: 2.5rem; margin-bottom: 8px;">💬</span>
+            <span style="font-weight: 600;">Mensajes</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 4px;">Comunicación por temas</span>
+          </a>
+          <a href="/calendar.html" class="nav-card">
+            <span style="font-size: 2.5rem; margin-bottom: 8px;">📅</span>
+            <span style="font-weight: 600;">Calendario</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 4px;">Eventos compartidos</span>
+          </a>
+          <a href="/child-view.html" class="nav-card" title="Vista previa de lo que ven los niños">
+            <span style="font-size: 2.5rem; margin-bottom: 8px;">👶</span>
+            <span style="font-weight: 600;">Vista Niño</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 4px;">Vista previa</span>
+          </a>
         </div>
       </div>
 
       <!-- Invitaciones y Gestión -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" x-show="user?.role === 'parent'">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" x-show="user?.role === 'parent'">
         <!-- Invitar Miembros -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h3 class="text-xl font-bold text-gray-800 mb-4">Invitar a la Familia</h3>
-          <div class="grid grid-cols-1 gap-3">
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom: 20px;">Invitar a la Familia</h3>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
             <button
               @click="openInviteModal('parent')"
-              class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200"
+              class="invite-button parent"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">👨‍👩‍👧</span>
-                <div class="text-left">
-                  <p class="font-semibold text-gray-800">Invitar otro Padre/Madre</p>
-                  <p class="text-sm text-gray-600">Agregar el otro progenitor a la familia</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span style="font-size: 1.5rem;">👨‍👩‍👧</span>
+                  <div style="text-align: left;">
+                    <p style="font-weight: 600; margin-bottom: 4px;">Invitar otro Padre/Madre</p>
+                    <p style="font-size: 0.85rem; color: var(--color-text-light);">Agregar el otro progenitor a la familia</p>
+                  </div>
                 </div>
+                <span style="color: var(--color-sage-dark);">→</span>
               </div>
-              <span class="text-blue-600">→</span>
             </button>
 
             <button
               @click="openInviteModal('child')"
-              class="flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors border-2 border-yellow-200"
+              class="invite-button child"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">👶</span>
-                <div class="text-left">
-                  <p class="font-semibold text-gray-800">Invitar un Niño</p>
-                  <p class="text-sm text-gray-600">Agregar hijos a la familia</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span style="font-size: 1.5rem;">👶</span>
+                  <div style="text-align: left;">
+                    <p style="font-weight: 600; margin-bottom: 4px;">Invitar un Niño</p>
+                    <p style="font-size: 0.85rem; color: var(--color-text-light);">Agregar hijos a la familia</p>
+                  </div>
                 </div>
+                <span style="color: #F57C00;">→</span>
               </div>
-              <span class="text-yellow-600">→</span>
             </button>
 
             <button
               @click="openInviteModal('professional')"
-              class="flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border-2 border-purple-200"
+              class="invite-button professional"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">👔</span>
-                <div class="text-left">
-                  <p class="font-semibold text-gray-800">Invitar un Profesional</p>
-                  <p class="text-sm text-gray-600">Abogados, terapeutas, trabajadores sociales</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span style="font-size: 1.5rem;">👔</span>
+                  <div style="text-align: left;">
+                    <p style="font-weight: 600; margin-bottom: 4px;">Invitar un Profesional</p>
+                    <p style="font-size: 0.85rem; color: var(--color-text-light);">Abogados, terapeutas, trabajadores sociales</p>
+                  </div>
                 </div>
+                <span style="color: #7B1FA2;">→</span>
               </div>
-              <span class="text-purple-600">→</span>
             </button>
           </div>
         </div>
 
         <!-- Unirse con Código -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h3 class="text-xl font-bold text-gray-800 mb-4">Unirse con Código</h3>
-          <p class="text-sm text-gray-600 mb-4">Ingresa el código de invitación que recibiste</p>
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom: 20px;">Unirse con Código</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 16px;">Ingresa el código de invitación que recibiste</p>
           <div class="flex gap-2">
             <input
               type="text"
               x-model="joinCode"
               placeholder="000000"
               maxlength="6"
-              class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center text-2xl font-mono tracking-widest"
+              class="code-input"
               @keyup.enter="joinFamily()"
             />
             <button
               @click="joinFamily()"
               :disabled="loading || !joinCode || joinCode.length !== 6"
-              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              class="btn btn-primary"
             >
               Unirse
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- Navegación Rápida -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-6">Navegación Rápida</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <a
-            href="/messages.html"
-            class="flex flex-col items-center justify-center p-6 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all hover:shadow-md border-2 border-blue-200"
-          >
-            <span class="text-4xl mb-2">💬</span>
-            <span class="font-semibold text-gray-800">Mensajes</span>
-            <span class="text-xs text-gray-600 mt-1">Comunicación por temas</span>
-          </a>
-          <a
-            href="/calendar.html"
-            class="flex flex-col items-center justify-center p-6 bg-green-50 hover:bg-green-100 rounded-xl transition-all hover:shadow-md border-2 border-green-200"
-          >
-            <span class="text-4xl mb-2">📅</span>
-            <span class="font-semibold text-gray-800">Calendario</span>
-            <span class="text-xs text-gray-600 mt-1">Eventos compartidos</span>
-          </a>
-          <a
-            href="/child-view.html"
-            class="flex flex-col items-center justify-center p-6 bg-yellow-50 hover:bg-yellow-100 rounded-xl transition-all hover:shadow-md border-2 border-yellow-200"
-          >
-            <span class="text-4xl mb-2">👶</span>
-            <span class="font-semibold text-gray-800">Vista Niño</span>
-            <span class="text-xs text-gray-600 mt-1">Vista simplificada</span>
-          </a>
-          <a
-            href="/professional.html"
-            class="flex flex-col items-center justify-center p-6 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all hover:shadow-md border-2 border-purple-200"
-          >
-            <span class="text-4xl mb-2">👔</span>
-            <span class="font-semibold text-gray-800">Profesional</span>
-            <span class="text-xs text-gray-600 mt-1">Vista profesional</span>
-          </a>
         </div>
       </div>
     </div>
@@ -442,20 +552,19 @@
     <div
       x-show="showCreateFamily"
       x-cloak
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="modal-overlay"
       @click.self="showCreateFamily = false"
     >
-      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
-        <h3 class="text-2xl font-bold mb-6">Crear Familia</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Nombre de la Familia
-            </label>
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Crear Familia</h3>
+        </div>
+        <div>
+          <div class="form-group">
+            <label>Nombre de la Familia</label>
             <input
               type="text"
               x-model="newFamilyName"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               placeholder="Ej: Familia García"
               @keyup.enter="createFamily()"
             />
@@ -464,13 +573,15 @@
             <button
               @click="createFamily()"
               :disabled="loading || !newFamilyName.trim()"
-              class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              class="btn btn-primary"
+              style="flex: 1; justify-content: center;"
             >
               Crear Familia
             </button>
             <button
               @click="showCreateFamily = false"
-              class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              class="btn btn-secondary"
+              style="flex: 1; justify-content: center;"
             >
               Cancelar
             </button>
@@ -483,53 +594,54 @@
     <div
       x-show="showInviteModal"
       x-cloak
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="modal-overlay"
       @click.self="showInviteModal = false"
     >
-      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
-        <h3 class="text-2xl font-bold mb-2">
-          Invitar <span x-text="getRoleLabel(inviteRole)"></span>
-        </h3>
-        <p class="text-gray-600 mb-6" x-text="inviteRole === 'parent' || inviteRole === 'professional' ? 'Ingresa el email de la persona a invitar' : 'Genera un código para que el niño se una'"></p>
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            Invitar <span x-text="getRoleLabel(inviteRole)"></span>
+          </h3>
+        </div>
+        <p style="color: var(--color-text-light); margin-bottom: 24px;" x-text="inviteRole === 'parent' || inviteRole === 'professional' ? 'Ingresa el email de la persona a invitar' : 'Genera un código para que el niño se una'"></p>
         
-        <div class="space-y-4">
-          <div x-show="inviteRole === 'parent' || inviteRole === 'professional'">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
+        <div>
+          <div x-show="inviteRole === 'parent' || inviteRole === 'professional'" class="form-group">
+            <label>Email</label>
             <input
               type="email"
               x-model="inviteEmail"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               placeholder="ejemplo@email.com"
             />
           </div>
           
-          <div x-show="invitationCode" class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-            <p class="text-sm font-medium text-gray-700 mb-2">Código de invitación:</p>
+          <div x-show="invitationCode" style="background: rgba(122, 158, 126, 0.1); border: 2px solid var(--color-sage-light); border-radius: var(--radius-md); padding: 24px; margin-bottom: 20px;">
+            <p style="font-weight: 500; margin-bottom: 12px;">Código de invitación:</p>
             <div class="flex items-center gap-3 mb-2">
-              <p class="text-3xl font-bold text-blue-600 tracking-widest font-mono flex-1 text-center" x-text="invitationCode"></p>
+              <p style="font-size: 1.75rem; font-weight: 700; color: var(--color-sage-dark); letter-spacing: 0.2em; font-family: monospace; flex: 1; text-align: center;" x-text="invitationCode"></p>
               <button
                 @click="copyInvitationCode()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                class="btn btn-primary"
               >
                 📋 Copiar
               </button>
             </div>
-            <p class="text-xs text-gray-600 text-center">Comparte este código. Válido por 48 horas</p>
+            <p style="font-size: 0.75rem; color: var(--color-text-light); text-align: center;">Comparte este código. Válido por 48 horas</p>
           </div>
 
           <div class="flex gap-3">
             <button
               @click="inviteMember()"
               :disabled="loading || (inviteRole === 'parent' || inviteRole === 'professional') && !inviteEmail.trim()"
-              class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+              class="btn btn-primary"
+              style="flex: 1; justify-content: center;"
             >
               <span x-text="invitationCode ? 'Generar Nuevo' : 'Generar Código'"></span>
             </button>
             <button
               @click="showInviteModal = false; invitationCode = ''"
-              class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              class="btn btn-secondary"
+              style="flex: 1; justify-content: center;"
             >
               Cerrar
             </button>
@@ -538,9 +650,5 @@
       </div>
     </div>
   </div>
-
-  <style>
-    [x-cloak] { display: none !important; }
-  </style>
 </body>
 </html>

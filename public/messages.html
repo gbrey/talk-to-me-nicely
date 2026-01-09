@@ -3,9 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mensajes - Talk to me nicely</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Mensajes - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .messages-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .messages-layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 24px;
+    }
+    
+    .channel-button {
+      width: 100%;
+      padding: 16px;
+      text-align: left;
+      background: var(--color-cream);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 500;
+    }
+    
+    .channel-button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+    
+    .channel-button.active {
+      background: var(--color-sage);
+      color: white;
+      border-color: var(--color-sage-dark);
+    }
+    
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 70vh;
+      min-height: 600px;
+    }
+    
+    .chat-header {
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--color-border);
+      margin-bottom: 16px;
+    }
+    
+    .messages-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .message-date-separator {
+      text-align: center;
+      margin: 16px 0;
+    }
+    
+    .date-badge {
+      background: var(--color-border);
+      color: var(--color-text-light);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .message-input-area {
+      border-top: 2px solid var(--color-border);
+      padding-top: 16px;
+    }
+    
+    .tone-button {
+      background: var(--color-terracotta);
+      color: white;
+    }
+    
+    .tone-button:hover {
+      background: var(--color-terracotta-light);
+    }
+    
+    @media (max-width: 768px) {
+      .messages-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .chat-container {
+        height: auto;
+        min-height: 500px;
+      }
+    }
+  </style>
   
   <script type="module">
     import { api } from '/js/api.js';
@@ -25,12 +120,14 @@
         selectedChannel: null,
         messages: [],
         newMessage: '',
+        shareWithChild: false,
         showToneModal: false,
         toneAnalysis: null,
         loading: false,
         loadingTone: false,
         error: null,
         success: null,
+        userRole: null,
 
         async init() {
           const userResult = await getCurrentUser();
@@ -39,6 +136,7 @@
             return;
           }
           this.currentUserId = userResult.user.id;
+          this.userRole = userResult.user.role;
           await this.loadFamily();
           // Auto-seleccionar el primer canal si hay familia
           if (this.currentFamilyId && this.channels.length > 0) {
@@ -89,15 +187,39 @@
         async sendMessage() {
           if (!this.newMessage.trim() || !this.currentFamilyId || !this.selectedChannel) return;
           
+          // Solo aplicar revisión automática de tono para padres
+          if (this.userRole === 'parent') {
+            this.loadingTone = true;
+            this.error = null;
+            this.success = null;
+            
+            // Simular proceso de validación de 2 segundos
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 50% de probabilidad de rechazar el mensaje
+            const shouldReject = Math.random() < 0.5;
+            
+            if (shouldReject) {
+              this.loadingTone = false;
+              this.error = 'El tono del mensaje no es apropiado. Por favor, escribe de manera más amable y respetuosa antes de enviar.';
+              return;
+            }
+            
+            this.loadingTone = false;
+            this.success = 'Tono aprobado ✓';
+            setTimeout(() => this.success = null, 2000);
+          }
+          
           this.loading = true;
           this.error = null;
           try {
             const response = await api.post(`messages/${this.currentFamilyId}/${this.selectedChannel}`, {
               content: this.newMessage,
-              shareWithChild: false,
+              shareWithChild: this.shareWithChild,
             });
             if (response.success) {
               this.newMessage = '';
+              this.shareWithChild = false; // Resetear después de enviar
               await this.loadMessages(this.selectedChannel);
               // Auto-scroll al final
               this.$nextTick(() => {
@@ -213,42 +335,41 @@
   
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-  <div x-data="messagesApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+<body>
+  <div x-data="messagesApp()" x-init="init()" class="messages-container">
     <!-- Header -->
-    <header class="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
-      <div>
-        <h1 class="text-3xl font-bold text-blue-600 mb-1">Mensajes</h1>
-        <p class="text-gray-600" x-text="selectedChannel ? getChannelName(selectedChannel) : 'Selecciona un canal'"></p>
+    <header class="card mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 style="margin-bottom: 4px;">Mensajes</h1>
+          <p style="color: var(--color-text-light); font-size: 0.9rem;" x-text="selectedChannel ? getChannelName(selectedChannel) : 'Selecciona un canal'"></p>
+        </div>
+        <a href="/dashboard.html" class="btn btn-secondary">
+          ← Dashboard
+        </a>
       </div>
-      <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
-        ← Dashboard
-      </a>
     </header>
 
     <!-- Alertas -->
-    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+    <div x-show="error" x-cloak class="alert alert-error mb-4" @click="error = null" style="cursor: pointer;">
       <p x-text="error"></p>
     </div>
-    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+    <div x-show="success" x-cloak class="alert alert-success mb-4" @click="success = null" style="cursor: pointer;">
       <p x-text="success"></p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="messages-layout">
       <!-- Canales -->
-      <div class="bg-white rounded-xl shadow-lg p-4">
-        <h2 class="font-bold text-lg mb-4 text-gray-800">Canales</h2>
-        <div class="space-y-2">
+      <div class="card card-compact">
+        <h2 class="card-title" style="margin-bottom: 16px;">Canales</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
           <template x-for="channel in channels" :key="channel.id">
             <button
               @click="selectChannel(channel.id)"
-              :class="selectedChannel === channel.id 
-                ? 'bg-' + channel.color + '-600 text-white shadow-md' 
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-2 border-gray-200'"
-              class="w-full text-left px-4 py-3 rounded-lg transition-all font-medium"
+              :class="selectedChannel === channel.id ? 'channel-button active' : 'channel-button'"
             >
               <div class="flex items-center gap-3">
-                <span class="text-2xl" x-text="channel.icon"></span>
+                <span style="font-size: 1.25rem;" x-text="channel.icon"></span>
                 <span x-text="channel.name"></span>
               </div>
             </button>
@@ -257,79 +378,101 @@
       </div>
 
       <!-- Chat -->
-      <div class="md:col-span-3 bg-white rounded-xl shadow-lg p-6 flex flex-col" style="height: 70vh; min-height: 600px;">
-        <div x-show="!selectedChannel" class="flex-1 flex items-center justify-center text-center text-gray-500">
+      <div class="card chat-container">
+        <div x-show="!selectedChannel" class="flex-1 flex items-center justify-center text-center" style="color: var(--color-text-light);">
           <div>
-            <div class="text-6xl mb-4">💬</div>
-            <p class="text-xl font-semibold">Selecciona un canal para ver los mensajes</p>
-            <p class="text-sm mt-2">Elige un tema de conversación en el panel lateral</p>
+            <div style="font-size: 4rem; margin-bottom: 16px;">💬</div>
+            <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">Selecciona un canal para ver los mensajes</p>
+            <p style="font-size: 0.9rem;">Elige un tema de conversación en el panel lateral</p>
           </div>
         </div>
 
         <div x-show="selectedChannel" class="flex-1 flex flex-col">
           <!-- Header del Canal -->
-          <div class="flex items-center gap-3 mb-4 pb-4 border-b-2 border-gray-100">
-            <span class="text-3xl" x-text="getChannelIcon(selectedChannel)"></span>
-            <div>
-              <h3 class="font-bold text-lg text-gray-800" x-text="getChannelName(selectedChannel)"></h3>
-              <p class="text-sm text-gray-600" x-text="messages.length + ' mensajes'"></p>
+          <div class="chat-header">
+            <div class="flex items-center gap-3">
+              <span style="font-size: 2rem;" x-text="getChannelIcon(selectedChannel)"></span>
+              <div>
+                <h3 style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;" x-text="getChannelName(selectedChannel)"></h3>
+                <p style="font-size: 0.85rem; color: var(--color-text-light);" x-text="messages.length + ' mensajes'"></p>
+              </div>
             </div>
           </div>
 
           <!-- Mensajes -->
-          <div class="flex-1 overflow-y-auto mb-4 space-y-4 pr-2" x-ref="messagesContainer">
+          <div class="messages-list custom-scrollbar" x-ref="messagesContainer">
             <template x-for="(message, index) in messages" :key="message.id">
               <div>
                 <!-- Separador de fecha -->
-                <div x-show="shouldShowDateSeparator(index)" class="text-center my-4">
-                  <span class="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-sm font-medium" x-text="formatDate(message.sentAt || message.sent_at)"></span>
+                <div x-show="shouldShowDateSeparator(index)" class="message-date-separator">
+                  <span class="date-badge" x-text="formatDate(message.sentAt || message.sent_at)"></span>
                 </div>
                 
                 <!-- Mensaje -->
-                <div class="flex flex-col" :class="(message.senderId || message.sender_id) === currentUserId ? 'items-end' : 'items-start'">
+                <div class="flex flex-col" :class="(message.senderId || message.sender_id) === currentUserId ? 'items-end' : 'items-start'" style="margin-bottom: 16px;">
                   <div
-                    class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm"
-                    :class="(message.senderId || message.sender_id) === currentUserId 
-                      ? 'bg-blue-600 text-white rounded-br-none' 
-                      : 'bg-gray-100 text-gray-800 rounded-bl-none'"
+                    class="chat-bubble"
+                    :class="(message.senderId || message.sender_id) === currentUserId ? 'sent' : 'received'"
+                    style="max-width: 70%;"
                   >
-                    <p class="text-xs font-semibold mb-1 opacity-75" x-text="message.senderEmail || message.sender_email"></p>
-                    <p class="text-sm whitespace-pre-wrap break-words" x-html="message.content"></p>
-                    <div class="flex justify-end items-center gap-2 mt-2 text-xs opacity-75">
-                      <span x-text="formatTime(message.sentAt || message.sent_at)"></span>
-                      <span x-show="message.isRead || message.read_at" class="ml-1">✓✓</span>
+                    <p style="font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; opacity: 0.8;" x-text="message.senderEmail || message.sender_email"></p>
+                    <p style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word;" x-html="message.content"></p>
+                    <div class="flex justify-between items-center gap-2 mt-2">
+                      <div x-show="message.shareWithChild || message.share_with_child" class="flex items-center gap-1" style="font-size: 0.7rem; opacity: 0.8;">
+                        <span>👶</span>
+                        <span>Compartido con niño</span>
+                      </div>
+                      <div class="flex justify-end items-center gap-2" style="font-size: 0.75rem; opacity: 0.7;">
+                        <span x-text="formatTime(message.sentAt || message.sent_at)"></span>
+                        <span x-show="message.isRead || message.read_at">✓✓</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </template>
             
-            <div x-show="loading" class="text-center py-4">
-              <p class="text-gray-500">Cargando mensajes...</p>
+            <div x-show="loading" class="text-center" style="padding: 16px; color: var(--color-text-light);">
+              <p>Cargando mensajes...</p>
             </div>
             
-            <div x-show="!loading && messages.length === 0" class="text-center py-8 text-gray-500">
-              <div class="text-4xl mb-2">📭</div>
+            <div x-show="!loading && messages.length === 0" class="text-center" style="padding: 32px; color: var(--color-text-light);">
+              <div style="font-size: 3rem; margin-bottom: 8px;">📭</div>
               <p>No hay mensajes en este canal</p>
-              <p class="text-sm mt-1">Sé el primero en escribir</p>
+              <p style="font-size: 0.85rem; margin-top: 4px;">Sé el primero en escribir</p>
             </div>
           </div>
 
           <!-- Input -->
-          <div class="border-t-2 border-gray-100 pt-4">
+          <div class="message-input-area">
             <textarea
               x-model="newMessage"
               @keydown.enter.ctrl="sendMessage()"
               @keydown.enter.shift.exact.prevent
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none resize-none"
               rows="3"
               placeholder="Escribe tu mensaje... (Ctrl+Enter para enviar, Shift+Enter para nueva línea)"
+              style="resize: none;"
             ></textarea>
+            
+            <!-- Opción para compartir con niño (solo para padres) -->
+            <div x-show="userRole === 'parent'" class="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="shareWithChild"
+                x-model="shareWithChild"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label for="shareWithChild" class="text-sm text-gray-700 cursor-pointer flex items-center gap-2">
+                <span>👶</span>
+                <span>Compartir este mensaje con el niño</span>
+              </label>
+            </div>
+            
             <div class="flex gap-2 mt-3">
               <button
                 @click="reviewTone()"
                 :disabled="!newMessage.trim() || loadingTone"
-                class="flex items-center justify-center gap-2 bg-yellow-500 text-white py-3 px-6 rounded-xl hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+                class="btn tone-button"
               >
                 <span>🤖</span>
                 <span>Revisar Tono</span>
@@ -337,7 +480,8 @@
               <button
                 @click="sendMessage()"
                 :disabled="!newMessage.trim() || loading"
-                class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold"
+                class="btn btn-primary"
+                style="flex: 1; justify-content: center;"
               >
                 Enviar
               </button>
@@ -351,96 +495,77 @@
     <div
       x-show="showToneModal"
       x-cloak
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="modal-overlay"
       @click.self="showToneModal = false"
     >
-      <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
-        <div class="flex items-center gap-3 mb-6">
-          <span class="text-4xl">🤖</span>
-          <h3 class="text-2xl font-bold">Análisis de Tono</h3>
+      <div class="modal">
+        <div class="modal-header">
+          <div class="flex items-center gap-3">
+            <span style="font-size: 2rem;">🤖</span>
+            <h3 class="modal-title">Análisis de Tono</h3>
+          </div>
         </div>
         
-        <div x-show="toneAnalysis" class="space-y-4">
-          <div x-show="toneAnalysis.hasIssues" class="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-            <p class="font-semibold text-red-800 mb-2 flex items-center gap-2">
+        <div x-show="toneAnalysis">
+          <div x-show="toneAnalysis.hasIssues" class="alert alert-error mb-4">
+            <p style="font-weight: 600; margin-bottom: 8px;" class="flex items-center gap-2">
               <span>⚠️</span>
               <span>Se detectaron problemas:</span>
             </p>
-            <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+            <ul style="list-style: disc; list-position: inside; font-size: 0.9rem; padding-left: 8px;">
               <template x-for="issue in toneAnalysis.issues" :key="issue">
-                <li x-text="issue"></li>
+                <li x-text="issue" style="margin-bottom: 4px;"></li>
               </template>
             </ul>
           </div>
           
-          <div x-show="!toneAnalysis.hasIssues" class="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-            <p class="text-green-800 font-semibold flex items-center gap-2">
+          <div x-show="!toneAnalysis.hasIssues" class="alert alert-success mb-4">
+            <p style="font-weight: 600;" class="flex items-center gap-2">
               <span>✓</span>
               <span>El tono del mensaje es apropiado</span>
             </p>
           </div>
           
-          <div x-show="toneAnalysis.suggestion" class="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-            <p class="font-semibold text-blue-800 mb-2">💡 Sugerencia:</p>
-            <p class="text-sm text-blue-700 whitespace-pre-wrap" x-text="toneAnalysis.suggestion"></p>
+          <div x-show="toneAnalysis.suggestion" class="alert alert-info mb-4">
+            <p style="font-weight: 600; margin-bottom: 8px;">💡 Sugerencia:</p>
+            <p style="font-size: 0.9rem; white-space: pre-wrap;" x-text="toneAnalysis.suggestion"></p>
           </div>
           
-          <div class="flex gap-3 pt-4">
+          <div class="flex gap-3">
             <button
               @click="useSuggestion()"
               x-show="toneAnalysis.suggestion"
-              class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors shadow-md font-semibold"
+              class="btn btn-primary"
+              style="flex: 1; justify-content: center;"
             >
               Usar Sugerencia
             </button>
             <button
               @click="sendOriginal()"
-              class="flex-1 bg-green-600 text-white py-3 px-6 rounded-xl hover:bg-green-700 transition-colors shadow-md font-semibold"
+              class="btn btn-secondary"
+              style="flex: 1; justify-content: center; background: var(--color-sage); color: white; border-color: var(--color-sage-dark);"
             >
               Enviar Original
             </button>
             <button
               @click="showToneModal = false"
-              class="bg-gray-200 text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors font-semibold"
+              class="btn btn-secondary"
             >
               Cancelar
             </button>
           </div>
         </div>
         
-        <div x-show="!toneAnalysis && !loadingTone" class="text-center text-gray-500 py-8">
+        <div x-show="!toneAnalysis && !loadingTone" class="text-center" style="padding: 32px; color: var(--color-text-light);">
           <p>No hay análisis disponible</p>
         </div>
         
-        <div x-show="loadingTone" class="text-center py-8">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p class="text-gray-600 font-medium">Analizando tono...</p>
+        <div x-show="loadingTone" class="text-center" style="padding: 32px;">
+          <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 16px;"></div>
+          <p style="color: var(--color-text-light); font-weight: 500;">Analizando tono...</p>
         </div>
       </div>
     </div>
   </div>
-
-  <style>
-    [x-cloak] { display: none !important; }
-    
-    /* Scrollbar personalizado */
-    .overflow-y-auto::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    .overflow-y-auto::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 10px;
-    }
-    
-    .overflow-y-auto::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 10px;
-    }
-    
-    .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
-  </style>
 </body>
 </html>
