@@ -5,124 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vista Profesional - Talk to me nicely</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="/css/custom.css">
-</head>
-<body class="bg-gray-50 min-h-screen">
-  <div x-data="professionalApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-purple-600">Vista Profesional</h1>
-      <a href="/index.html" class="text-blue-600 hover:underline">← Dashboard</a>
-    </header>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Mensajes (Read-only) -->
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold mb-4">Mensajes</h2>
-        <div class="space-y-2 max-h-96 overflow-y-auto">
-          <template x-for="message in messages" :key="message.id">
-            <div class="border rounded-md p-3">
-              <div class="flex justify-between items-start mb-2">
-                <span class="font-medium text-sm" x-text="message.senderEmail"></span>
-                <span class="text-xs text-gray-500" x-text="formatTime(message.sentAt)"></span>
-              </div>
-              <p class="text-sm text-gray-700" x-html="message.content"></p>
-              <p class="text-xs text-gray-500 mt-1" x-text="'Canal: ' + message.channel"></p>
-            </div>
-          </template>
-          <div x-show="messages.length === 0" class="text-center text-gray-500 py-8">
-            No hay mensajes
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendario (Read-only) -->
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold mb-4">Calendario</h2>
-        <div class="space-y-2 max-h-96 overflow-y-auto">
-          <template x-for="event in events" :key="event.id">
-            <div class="border rounded-md p-3">
-              <h3 class="font-semibold" x-text="event.title"></h3>
-              <p class="text-sm text-gray-600" x-text="formatDate(event.startTime)"></p>
-              <p class="text-xs text-gray-500" x-text="event.eventType"></p>
-            </div>
-          </template>
-          <div x-show="events.length === 0" class="text-center text-gray-500 py-8">
-            No hay eventos
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Generar Reporte -->
-    <div class="mt-6 bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold mb-4">Generar Reporte</h2>
-      <div class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
-            <input
-              type="date"
-              x-model="reportStart"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
-            <input
-              type="date"
-              x-model="reportEnd"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select x-model="reportType" class="w-full px-4 py-2 border border-gray-300 rounded-md">
-              <option value="messages">Mensajes</option>
-              <option value="calendar">Calendario</option>
-            </select>
-          </div>
-        </div>
-        <button
-          @click="generateReport()"
-          :disabled="loading"
-          class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:opacity-50"
-        >
-          <span x-show="!loading">Generar Reporte</span>
-          <span x-show="loading" class="flex items-center justify-center">
-            <span class="spinner mr-2"></span>
-            Generando...
-          </span>
-        </button>
-        <div x-show="reportData" class="mt-4 p-4 bg-gray-100 rounded-md">
-          <p class="font-medium mb-2">Reporte generado:</p>
-          <pre class="text-xs overflow-auto" x-text="JSON.stringify(reportData, null, 2)"></pre>
-          <button
-            @click="downloadReport()"
-            class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Descargar JSON
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
   <script type="module">
     import { api } from '/js/api.js';
     import { getCurrentUser } from '/js/auth.js';
 
-    function professionalApp() {
+    window.professionalApp = function professionalApp() {
       return {
         currentFamilyId: null,
+        currentUserId: null,
         messages: [],
         events: [],
+        family: null,
+        stats: {
+          totalMessages: 0,
+          totalEvents: 0,
+          activeChannels: 0,
+          lastActivity: null,
+        },
         reportStart: '',
         reportEnd: '',
         reportType: 'messages',
         reportData: null,
         loading: false,
+        error: null,
+        success: null,
+        selectedChannel: 'all',
+        searchQuery: '',
+        selectedTab: 'overview', // 'overview', 'messages', 'calendar', 'reports'
 
         async init() {
           const userResult = await getCurrentUser();
@@ -130,15 +41,17 @@
             window.location.href = '/login.html';
             return;
           }
-          await this.loadFamily();
-          await this.loadData();
-
+          this.currentUserId = userResult.user.id;
+          
           // Setear fechas por defecto (último mes)
           const end = new Date();
           const start = new Date();
           start.setMonth(start.getMonth() - 1);
           this.reportEnd = end.toISOString().split('T')[0];
           this.reportStart = start.toISOString().split('T')[0];
+          
+          await this.loadFamily();
+          await this.loadData();
         },
 
         async loadFamily() {
@@ -146,48 +59,123 @@
             const response = await api.get('family');
             if (response.families && response.families.length > 0) {
               this.currentFamilyId = response.families[0].family_id;
+              const familyData = await api.get(`family/${this.currentFamilyId}`);
+              this.family = familyData.family;
             }
           } catch (error) {
             console.error('Error loading family:', error);
+            this.error = 'Error al cargar la familia';
           }
         },
 
         async loadData() {
           if (!this.currentFamilyId) return;
+          this.loading = true;
+          this.error = null;
 
           try {
-            // Cargar mensajes (último mes)
-            const channels = ['daily', 'health', 'school', 'calendar', 'vacation'];
+            // Cargar mensajes
+            const channels = [
+              { id: 'daily', name: 'Cotidiano', icon: '💬' },
+              { id: 'health', name: 'Salud', icon: '🏥' },
+              { id: 'school', name: 'Escuela', icon: '📚' },
+              { id: 'calendar', name: 'Calendario', icon: '📅' },
+              { id: 'vacation', name: 'Vacaciones', icon: '🏖️' },
+            ];
+            
             this.messages = [];
             for (const channel of channels) {
               try {
                 const response = await api.get(
-                  `messages/${this.currentFamilyId}/${channel}`
+                  `messages/${this.currentFamilyId}/${channel.id}`
                 );
-                this.messages.push(...response.messages);
+                const channelMessages = (response.messages || []).map(msg => ({
+                  ...msg,
+                  channel: channel.id,
+                  channelName: channel.name,
+                  channelIcon: channel.icon,
+                }));
+                this.messages.push(...channelMessages);
               } catch (error) {
-                console.error(`Error loading messages from ${channel}:`, error);
+                console.error(`Error loading messages from ${channel.id}:`, error);
               }
             }
-            this.messages.sort((a, b) => b.sentAt - a.sentAt).slice(0, 50);
+            this.messages = this.messages
+              .sort((a, b) => (b.sentAt || b.sent_at) - (a.sentAt || a.sent_at));
 
             // Cargar eventos
             const eventsResponse = await api.get(`calendar/${this.currentFamilyId}`);
-            this.events = eventsResponse.events
-              .sort((a, b) => b.startTime - a.startTime)
-              .slice(0, 20);
+            this.events = (eventsResponse.events || [])
+              .sort((a, b) => (b.startTime || b.start_time) - (a.startTime || a.start_time));
+
+            // Calcular estadísticas
+            this.calculateStats();
           } catch (error) {
             console.error('Error loading data:', error);
+            this.error = 'Error al cargar datos: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
           }
+        },
+
+        calculateStats() {
+          this.stats.totalMessages = this.messages.length;
+          this.stats.totalEvents = this.events.length;
+          
+          const uniqueChannels = new Set(this.messages.map(m => m.channel));
+          this.stats.activeChannels = uniqueChannels.size;
+          
+          if (this.messages.length > 0) {
+            const lastMsg = this.messages[0];
+            const lastTimestamp = lastMsg.sentAt || lastMsg.sent_at;
+            this.stats.lastActivity = lastTimestamp ? this.formatDate(lastTimestamp) : 'N/A';
+          } else {
+            this.stats.lastActivity = 'N/A';
+          }
+        },
+
+        get filteredMessages() {
+          let filtered = this.messages;
+          
+          if (this.selectedChannel !== 'all') {
+            filtered = filtered.filter(m => m.channel === this.selectedChannel);
+          }
+          
+          if (this.searchQuery.trim()) {
+            const query = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(m => 
+              (m.content || '').toLowerCase().includes(query) ||
+              (m.senderEmail || m.sender_email || '').toLowerCase().includes(query)
+            );
+          }
+          
+          return filtered.slice(0, 50);
+        },
+
+        get filteredEvents() {
+          let filtered = this.events;
+          
+          if (this.searchQuery.trim()) {
+            const query = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(e => 
+              (e.title || '').toLowerCase().includes(query) ||
+              (e.description || '').toLowerCase().includes(query)
+            );
+          }
+          
+          return filtered.slice(0, 50);
         },
 
         async generateReport() {
           if (!this.reportStart || !this.reportEnd) {
-            alert('Selecciona fechas de inicio y fin');
+            this.error = 'Selecciona fechas de inicio y fin';
             return;
           }
 
           this.loading = true;
+          this.error = null;
+          this.success = null;
+          
           try {
             const startTimestamp = Math.floor(
               new Date(this.reportStart).getTime() / 1000
@@ -199,28 +187,39 @@
             const response = await api.get(
               `export/${this.currentFamilyId}/${this.reportType}?start=${startTimestamp}&end=${endTimestamp}`
             );
-            this.reportData = response.report;
+            this.reportData = response.report || response;
+            this.success = 'Reporte generado exitosamente';
+            setTimeout(() => this.success = null, 5000);
           } catch (error) {
-            alert('Error al generar reporte: ' + error.message);
+            this.error = 'Error al generar reporte: ' + (error.message || 'Error desconocido');
           } finally {
             this.loading = false;
           }
         },
 
-        downloadReport() {
+        downloadReport(format = 'json') {
           if (!this.reportData) return;
-          const blob = new Blob([JSON.stringify(this.reportData, null, 2)], {
-            type: 'application/json',
-          });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `reporte-${this.reportType}-${Date.now()}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
+          
+          if (format === 'json') {
+            const blob = new Blob([JSON.stringify(this.reportData, null, 2)], {
+              type: 'application/json',
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte-${this.reportType}-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.success = 'Reporte descargado en formato JSON';
+            setTimeout(() => this.success = null, 3000);
+          } else if (format === 'pdf') {
+            // Para PDF, sería necesario un servicio o librería
+            this.error = 'Exportación PDF próximamente disponible';
+          }
         },
 
         formatTime(timestamp) {
+          if (!timestamp) return 'N/A';
           const date = new Date(timestamp * 1000);
           return date.toLocaleTimeString('es-AR', {
             hour: '2-digit',
@@ -229,6 +228,7 @@
         },
 
         formatDate(timestamp) {
+          if (!timestamp) return 'N/A';
           const date = new Date(timestamp * 1000);
           return date.toLocaleDateString('es-AR', {
             day: 'numeric',
@@ -238,11 +238,381 @@
             minute: '2-digit',
           });
         },
-      };
-    }
 
-    window.professionalApp = professionalApp;
+        formatShortDate(timestamp) {
+          if (!timestamp) return 'N/A';
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleDateString('es-AR', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          });
+        },
+
+        getEventIcon(eventType) {
+          const icons = {
+            pickup: '🚗',
+            dropoff: '📍',
+            medical: '🏥',
+            school: '📚',
+            vacation: '🏖️',
+            other: '📅',
+          };
+          return icons[eventType] || icons.other;
+        },
+
+        getEventTypeLabel(eventType) {
+          const labels = {
+            pickup: 'Retiro',
+            dropoff: 'Entrega',
+            medical: 'Cita Médica',
+            school: 'Evento Escolar',
+            vacation: 'Vacaciones',
+            other: 'Otro',
+          };
+          return labels[eventType] || 'Otro';
+        },
+      };
+    };
   </script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
+  <div x-data="professionalApp()" x-init="init()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-white rounded-xl shadow-lg p-6 mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-purple-600 mb-1">👔 Vista Profesional</h1>
+          <p class="text-gray-600" x-show="family" x-text="'Familia: ' + (family?.name || 'Sin nombre')"></p>
+        </div>
+        <a href="/dashboard.html" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
+          ← Dashboard
+        </a>
+      </div>
+    </header>
+
+    <!-- Alertas -->
+    <div x-show="error" x-cloak class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" @click="error = null">
+      <p x-text="error"></p>
+    </div>
+    <div x-show="success" x-cloak class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" @click="success = null">
+      <p x-text="success"></p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-xl shadow-lg p-2 mb-6 flex gap-2 overflow-x-auto">
+      <button
+        @click="selectedTab = 'overview'"
+        :class="selectedTab === 'overview' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+      >
+        📊 Resumen
+      </button>
+      <button
+        @click="selectedTab = 'messages'"
+        :class="selectedTab === 'messages' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+      >
+        💬 Mensajes
+      </button>
+      <button
+        @click="selectedTab = 'calendar'"
+        :class="selectedTab === 'calendar' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+      >
+        📅 Calendario
+      </button>
+      <button
+        @click="selectedTab = 'reports'"
+        :class="selectedTab === 'reports' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+      >
+        📋 Reportes
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+      <p class="text-gray-600">Cargando datos...</p>
+    </div>
+
+    <!-- Overview Tab -->
+    <div x-show="selectedTab === 'overview' && !loading" class="space-y-6">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Total Mensajes</p>
+              <p class="text-3xl font-bold text-gray-800" x-text="stats.totalMessages"></p>
+            </div>
+            <span class="text-4xl">💬</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Total Eventos</p>
+              <p class="text-3xl font-bold text-gray-800" x-text="stats.totalEvents"></p>
+            </div>
+            <span class="text-4xl">📅</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Canales Activos</p>
+              <p class="text-3xl font-bold text-gray-800" x-text="stats.activeChannels"></p>
+            </div>
+            <span class="text-4xl">📊</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Última Actividad</p>
+              <p class="text-sm font-semibold text-gray-800" x-text="stats.lastActivity"></p>
+            </div>
+            <span class="text-4xl">🕐</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Family Members -->
+      <div class="bg-white rounded-xl shadow-lg p-6" x-show="family">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">👨‍👩‍👧 Miembros de la Familia</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <template x-for="member in family?.members" :key="member.id">
+            <div class="border-2 border-gray-200 rounded-lg p-4">
+              <p class="font-semibold text-gray-800" x-text="member.display_name || member.email"></p>
+              <p class="text-sm text-gray-600 mt-1" x-text="member.role === 'parent' ? 'Padre/Madre' : member.role === 'child' ? 'Niño' : 'Profesional'"></p>
+              <p class="text-xs text-gray-500 mt-1" x-text="member.email"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Recent Messages -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">💬 Mensajes Recientes</h2>
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            <template x-for="message in messages.slice(0, 5)" :key="message.id">
+              <div class="border-l-4 border-blue-500 pl-4 py-2">
+                <div class="flex justify-between items-start mb-1">
+                  <p class="font-semibold text-sm" x-text="message.senderEmail || message.sender_email"></p>
+                  <span class="text-xs text-gray-500" x-text="formatTime(message.sentAt || message.sent_at)"></span>
+                </div>
+                <p class="text-sm text-gray-700 line-clamp-2" x-html="message.content"></p>
+                <p class="text-xs text-gray-500 mt-1" x-text="message.channelName"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Upcoming Events -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4 text-gray-800">📅 Próximos Eventos</h2>
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            <template x-for="event in events.filter(e => (e.startTime || e.start_time) >= Math.floor(Date.now() / 1000)).slice(0, 5)" :key="event.id">
+              <div class="border-l-4 border-green-500 pl-4 py-2">
+                <p class="font-semibold text-sm" x-text="event.title"></p>
+                <p class="text-xs text-gray-600 mt-1" x-text="formatDate(event.startTime || event.start_time)"></p>
+                <p class="text-xs text-gray-500 mt-1" x-text="getEventTypeLabel(event.eventType || event.event_type)"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages Tab -->
+    <div x-show="selectedTab === 'messages' && !loading" class="space-y-6">
+      <!-- Filters -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Canal</label>
+            <select x-model="selectedChannel" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+              <option value="all">Todos los canales</option>
+              <option value="daily">💬 Cotidiano</option>
+              <option value="health">🏥 Salud</option>
+              <option value="school">📚 Escuela</option>
+              <option value="calendar">📅 Calendario</option>
+              <option value="vacation">🏖️ Vacaciones</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+            <input
+              type="text"
+              x-model="searchQuery"
+              placeholder="Buscar en mensajes..."
+              class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages List -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">💬 Mensajes (<span x-text="filteredMessages.length"></span>)</h2>
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          <template x-for="message in filteredMessages" :key="message.id">
+            <div class="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl" x-text="message.channelIcon"></span>
+                  <div>
+                    <p class="font-semibold text-gray-800" x-text="message.senderEmail || message.sender_email"></p>
+                    <p class="text-xs text-gray-500" x-text="message.channelName"></p>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500" x-text="formatDate(message.sentAt || message.sent_at)"></span>
+              </div>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap break-words mt-2" x-html="message.content"></p>
+              <div class="flex gap-2 mt-2 text-xs text-gray-500">
+                <span x-show="message.isRead || message.read_at">✓ Leído</span>
+                <span x-show="message.shareWithChild || message.share_with_child">👶 Compartido con niño</span>
+              </div>
+            </div>
+          </template>
+          
+          <div x-show="filteredMessages.length === 0" class="text-center py-12 text-gray-500">
+            <p class="text-lg">No hay mensajes que coincidan con los filtros</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Tab -->
+    <div x-show="selectedTab === 'calendar' && !loading" class="space-y-6">
+      <!-- Search -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Buscar eventos</label>
+        <input
+          type="text"
+          x-model="searchQuery"
+          placeholder="Buscar en eventos..."
+          class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
+        />
+      </div>
+
+      <!-- Events List -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">📅 Eventos (<span x-text="filteredEvents.length"></span>)</h2>
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          <template x-for="event in filteredEvents" :key="event.id">
+            <div class="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+              <div class="flex items-start gap-4">
+                <span class="text-4xl" x-text="getEventIcon(event.eventType || event.event_type)"></span>
+                <div class="flex-1">
+                  <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-bold text-lg text-gray-800" x-text="event.title"></h3>
+                    <span class="text-xs px-3 py-1 bg-purple-100 text-purple-800 rounded-full" x-text="getEventTypeLabel(event.eventType || event.event_type)"></span>
+                  </div>
+                  <p class="text-sm text-gray-600 mb-1" x-text="formatDate(event.startTime || event.start_time)"></p>
+                  <p x-show="event.description" class="text-sm text-gray-700 mt-2" x-text="event.description"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+          
+          <div x-show="filteredEvents.length === 0" class="text-center py-12 text-gray-500">
+            <p class="text-lg">No hay eventos que coincidan con la búsqueda</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div x-show="selectedTab === 'reports' && !loading" class="space-y-6">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">📋 Generar Reporte</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio *</label>
+            <input
+              type="date"
+              x-model="reportStart"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin *</label>
+            <input
+              type="date"
+              x-model="reportEnd"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte *</label>
+            <select x-model="reportType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+              <option value="messages">Mensajes</option>
+              <option value="calendar">Calendario</option>
+              <option value="all">Todos</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          @click="generateReport()"
+          :disabled="loading || !reportStart || !reportEnd"
+          class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md font-semibold mb-6"
+        >
+          <span x-show="!loading">📊 Generar Reporte</span>
+          <span x-show="loading" class="flex items-center justify-center">
+            <span class="animate-spin mr-2">⏳</span>
+            Generando...
+          </span>
+        </button>
+
+        <div x-show="reportData" class="border-2 border-purple-200 rounded-lg p-6 bg-purple-50">
+          <div class="flex justify-between items-start mb-4">
+            <h3 class="text-lg font-bold text-purple-800">Reporte Generado</h3>
+            <div class="flex gap-2">
+              <button
+                @click="downloadReport('json')"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              >
+                📥 Descargar JSON
+              </button>
+            </div>
+          </div>
+          <div class="bg-white rounded-lg p-4 max-h-96 overflow-auto">
+            <pre class="text-xs text-gray-700 whitespace-pre-wrap" x-text="JSON.stringify(reportData, null, 2)"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
 </body>
 </html>
-

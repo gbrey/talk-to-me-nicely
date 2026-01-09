@@ -5,71 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vista Niño - Talk to me nicely</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="/css/custom.css">
-</head>
-<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen">
-  <div x-data="childViewApp()" x-init="init()" class="max-w-4xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <header class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-blue-600 mb-2">👋 Hola!</h1>
-      <p class="text-lg text-gray-700">Tu calendario y mensajes</p>
-    </header>
-
-    <!-- Calendario Simplificado -->
-    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-      <h2 class="text-2xl font-bold mb-4 text-center">📅 Calendario</h2>
-      <div class="space-y-4">
-        <template x-for="event in childEvents" :key="event.id">
-          <div class="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-            <div class="flex items-center gap-3">
-              <div class="text-3xl">
-                <span x-show="event.eventType === 'pickup'">🚗</span>
-                <span x-show="event.eventType === 'dropoff'">🏠</span>
-                <span x-show="event.eventType === 'school'">📚</span>
-                <span x-show="event.eventType === 'vacation'">✈️</span>
-                <span x-show="!['pickup', 'dropoff', 'school', 'vacation'].includes(event.eventType)">📅</span>
-              </div>
-              <div>
-                <h3 class="font-bold text-lg" x-text="event.title"></h3>
-                <p class="text-gray-600" x-text="formatDate(event.startTime)"></p>
-              </div>
-            </div>
-          </div>
-        </template>
-        <div x-show="childEvents.length === 0" class="text-center text-gray-500 py-8">
-          No hay eventos próximos
-        </div>
-      </div>
-    </div>
-
-    <!-- Mensajes Compartidos -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-      <h2 class="text-2xl font-bold mb-4 text-center">💬 Mensajes</h2>
-      <div class="space-y-4">
-        <template x-for="message in childMessages" :key="message.id">
-          <div class="border-2 border-green-200 rounded-lg p-4 bg-green-50">
-            <p class="font-medium mb-2" x-text="message.senderEmail"></p>
-            <p class="text-gray-700" x-html="message.content"></p>
-            <p class="text-xs text-gray-500 mt-2" x-text="formatTime(message.sentAt)"></p>
-          </div>
-        </template>
-        <div x-show="childMessages.length === 0" class="text-center text-gray-500 py-8">
-          No hay mensajes compartidos
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
   <script type="module">
     import { api } from '/js/api.js';
     import { getCurrentUser } from '/js/auth.js';
 
-    function childViewApp() {
+    window.childViewApp = function childViewApp() {
       return {
         currentFamilyId: null,
+        currentUserId: null,
         childEvents: [],
         childMessages: [],
+        loading: false,
+        selectedTab: 'calendar', // 'calendar' or 'messages'
 
         async init() {
           const userResult = await getCurrentUser();
@@ -77,8 +26,11 @@
             window.location.href = '/login.html';
             return;
           }
+          this.currentUserId = userResult.user.id;
           await this.loadFamily();
           await this.loadData();
+          // Auto-refresh cada 30 segundos
+          setInterval(() => this.loadData(), 30000);
         },
 
         async loadFamily() {
@@ -94,38 +46,110 @@
 
         async loadData() {
           if (!this.currentFamilyId) return;
+          this.loading = true;
 
           try {
             // Cargar eventos
             const eventsResponse = await api.get(`calendar/${this.currentFamilyId}`);
             const now = Math.floor(Date.now() / 1000);
-            this.childEvents = eventsResponse.events
-              .filter((e) => e.startTime >= now)
-              .sort((a, b) => a.startTime - b.startTime)
-              .slice(0, 5);
+            this.childEvents = (eventsResponse.events || [])
+              .filter((e) => (e.startTime || e.start_time) >= now)
+              .sort((a, b) => (a.startTime || a.start_time) - (b.startTime || b.start_time))
+              .slice(0, 10);
 
             // Cargar mensajes compartidos
-            const channels = ['daily', 'health', 'school', 'calendar', 'vacation'];
+            const channels = [
+              { id: 'daily', name: 'Cotidiano', icon: '💬' },
+              { id: 'health', name: 'Salud', icon: '🏥' },
+              { id: 'school', name: 'Escuela', icon: '📚' },
+              { id: 'calendar', name: 'Calendario', icon: '📅' },
+              { id: 'vacation', name: 'Vacaciones', icon: '🏖️' },
+            ];
+            
             this.childMessages = [];
             for (const channel of channels) {
               try {
                 const messagesResponse = await api.get(
-                  `messages/${this.currentFamilyId}/${channel}`
+                  `messages/${this.currentFamilyId}/${channel.id}`
                 );
-                const shared = messagesResponse.messages.filter((m) => m.shareWithChild);
+                const shared = (messagesResponse.messages || []).filter(
+                  (m) => m.shareWithChild || m.share_with_child
+                );
+                shared.forEach(msg => {
+                  msg.channelName = channel.name;
+                  msg.channelIcon = channel.icon;
+                });
                 this.childMessages.push(...shared);
               } catch (error) {
-                console.error(`Error loading messages from ${channel}:`, error);
+                console.error(`Error loading messages from ${channel.id}:`, error);
               }
             }
-            this.childMessages.sort((a, b) => b.sentAt - a.sentAt).slice(0, 10);
+            this.childMessages = this.childMessages
+              .sort((a, b) => (b.sentAt || b.sent_at) - (a.sentAt || a.sent_at))
+              .slice(0, 20);
           } catch (error) {
             console.error('Error loading data:', error);
+          } finally {
+            this.loading = false;
           }
         },
 
+        getEventIcon(eventType) {
+          const icons = {
+            pickup: '🚗',
+            dropoff: '🏠',
+            medical: '🏥',
+            school: '📚',
+            vacation: '🏖️',
+            other: '📅',
+          };
+          return icons[eventType] || icons.other;
+        },
+
+        getEventColor(eventType) {
+          const colors = {
+            pickup: 'bg-blue-100 border-blue-300 text-blue-800',
+            dropoff: 'bg-green-100 border-green-300 text-green-800',
+            medical: 'bg-red-100 border-red-300 text-red-800',
+            school: 'bg-yellow-100 border-yellow-300 text-yellow-800',
+            vacation: 'bg-purple-100 border-purple-300 text-purple-800',
+            other: 'bg-gray-100 border-gray-300 text-gray-800',
+          };
+          return colors[eventType] || colors.other;
+        },
+
+        getEventLabel(eventType) {
+          const labels = {
+            pickup: 'Te van a buscar',
+            dropoff: 'Te van a llevar',
+            medical: 'Cita médica',
+            school: 'Escuela',
+            vacation: 'Vacaciones',
+            other: 'Evento',
+          };
+          return labels[eventType] || 'Evento';
+        },
+
         formatDate(timestamp) {
-          const date = new Date(timestamp * 1000);
+          const date = new Date((timestamp || 0) * 1000);
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          
+          const diffTime = date - now;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 0) {
+            return 'Hoy a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          } else if (diffDays === 1) {
+            return 'Mañana a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          } else if (diffDays === -1) {
+            return 'Ayer a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          } else if (diffDays > 0 && diffDays <= 7) {
+            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            return days[date.getDay()] + ' a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          }
+          
           return date.toLocaleDateString('es-AR', {
             day: 'numeric',
             month: 'long',
@@ -135,17 +159,190 @@
         },
 
         formatTime(timestamp) {
-          const date = new Date(timestamp * 1000);
-          return date.toLocaleTimeString('es-AR', {
+          const date = new Date((timestamp || 0) * 1000);
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          
+          if (messageDate.getTime() === today.getTime()) {
+            return 'Hoy a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          } else if (messageDate.getTime() === today.getTime() - 86400000) {
+            return 'Ayer a las ' + date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          }
+          
+          return date.toLocaleDateString('es-AR', {
+            day: 'numeric',
+            month: 'short',
             hour: '2-digit',
             minute: '2-digit',
           });
         },
-      };
-    }
 
-    window.childViewApp = childViewApp;
+        isToday(timestamp) {
+          const date = new Date((timestamp || 0) * 1000);
+          const now = new Date();
+          return date.toDateString() === now.toDateString();
+        },
+
+        isTomorrow(timestamp) {
+          const date = new Date((timestamp || 0) * 1000);
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return date.toDateString() === tomorrow.toDateString();
+        },
+      };
+    };
   </script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50 min-h-screen">
+  <div x-data="childViewApp()" x-init="init()" class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="bg-white rounded-2xl shadow-lg p-6 mb-6 text-center">
+      <div class="flex items-center justify-center gap-3 mb-3">
+        <span class="text-5xl">👋</span>
+        <div>
+          <h1 class="text-3xl font-bold text-purple-600 mb-1">¡Hola!</h1>
+          <p class="text-gray-600">Tu calendario y mensajes</p>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-center mt-4">
+        <button
+          @click="selectedTab = 'calendar'"
+          :class="selectedTab === 'calendar' ? 'bg-purple-600 text-white shadow-lg' : 'bg-purple-100 text-purple-700'"
+          class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2"
+        >
+          <span>📅</span>
+          <span>Calendario</span>
+        </button>
+        <button
+          @click="selectedTab = 'messages'"
+          :class="selectedTab === 'messages' ? 'bg-pink-600 text-white shadow-lg' : 'bg-pink-100 text-pink-700'"
+          class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2"
+        >
+          <span>💬</span>
+          <span>Mensajes</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+      <p class="text-gray-600">Cargando...</p>
+    </div>
+
+    <!-- Calendario Tab -->
+    <div x-show="selectedTab === 'calendar' && !loading" class="space-y-6">
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6 text-center text-purple-600 flex items-center justify-center gap-2">
+          <span>📅</span>
+          <span>Próximos Eventos</span>
+        </h2>
+        
+        <div class="space-y-4">
+          <template x-for="event in childEvents" :key="event.id">
+            <div 
+              class="border-2 rounded-2xl p-5 transition-all hover:shadow-lg transform hover:-translate-y-1"
+              :class="getEventColor(event.eventType || event.event_type)"
+            >
+              <div class="flex items-start gap-4">
+                <div class="text-5xl flex-shrink-0" x-text="getEventIcon(event.eventType || event.event_type)"></div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-xl" x-text="event.title"></h3>
+                    <span 
+                      class="px-3 py-1 rounded-full text-xs font-semibold"
+                      :class="isToday(event.startTime || event.start_time) ? 'bg-yellow-200 text-yellow-800' : isTomorrow(event.startTime || event.start_time) ? 'bg-blue-200 text-blue-800' : ''"
+                      x-show="isToday(event.startTime || event.start_time) || isTomorrow(event.startTime || event.start_time)"
+                      x-text="isToday(event.startTime || event.start_time) ? '¡Hoy!' : 'Mañana'"
+                    ></span>
+                  </div>
+                  <p class="text-sm mb-1" x-text="getEventLabel(event.eventType || event.event_type)"></p>
+                  <p class="font-semibold text-lg" x-text="formatDate(event.startTime || event.start_time)"></p>
+                  <p x-show="event.description" class="text-sm mt-2 opacity-75" x-text="event.description"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+          
+          <div x-show="childEvents.length === 0" class="text-center py-12">
+            <div class="text-6xl mb-4">📅</div>
+            <p class="text-xl font-semibold text-gray-700 mb-2">No hay eventos próximos</p>
+            <p class="text-gray-500">¡Tranquilo! Te avisaremos cuando haya algo nuevo.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Próximo evento destacado -->
+      <div x-show="childEvents.length > 0" class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-lg p-6 text-white">
+        <div class="flex items-center gap-4">
+          <div class="text-5xl" x-text="getEventIcon(childEvents[0].eventType || childEvents[0].event_type)"></div>
+          <div>
+            <p class="text-sm opacity-90 mb-1">Próximo evento:</p>
+            <h3 class="text-2xl font-bold mb-1" x-text="childEvents[0].title"></h3>
+            <p class="text-lg" x-text="formatDate(childEvents[0].startTime || childEvents[0].start_time)"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensajes Tab -->
+    <div x-show="selectedTab === 'messages' && !loading" class="space-y-6">
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6 text-center text-pink-600 flex items-center justify-center gap-2">
+          <span>💬</span>
+          <span>Mensajes Importantes</span>
+        </h2>
+        
+        <div class="space-y-4">
+          <template x-for="message in childMessages" :key="message.id">
+            <div class="border-2 border-pink-200 rounded-2xl p-5 bg-gradient-to-br from-pink-50 to-purple-50 transition-all hover:shadow-lg">
+              <div class="flex items-start gap-3 mb-3">
+                <span class="text-3xl" x-text="message.channelIcon"></span>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="font-bold text-lg" x-text="message.senderEmail || message.sender_email"></p>
+                    <span class="text-xs px-2 py-1 bg-pink-200 rounded-full text-pink-800 font-semibold" x-text="message.channelName"></span>
+                  </div>
+                  <p class="text-xs text-gray-600 mb-3" x-text="formatTime(message.sentAt || message.sent_at)"></p>
+                </div>
+              </div>
+              <div class="bg-white rounded-xl p-4 border border-pink-100">
+                <p class="text-gray-800 whitespace-pre-wrap break-words" x-html="message.content"></p>
+              </div>
+            </div>
+          </template>
+          
+          <div x-show="childMessages.length === 0" class="text-center py-12">
+            <div class="text-6xl mb-4">💬</div>
+            <p class="text-xl font-semibold text-gray-700 mb-2">No hay mensajes compartidos</p>
+            <p class="text-gray-500">Cuando tus papás compartan algo contigo, aparecerá aquí.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-8 pb-6">
+      <p class="text-gray-500 text-sm">
+        <span class="text-2xl">✨</span><br>
+        Hecho con cariño para ti
+      </p>
+    </footer>
+  </div>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
 </body>
 </html>
-
