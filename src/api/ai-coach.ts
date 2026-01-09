@@ -118,6 +118,7 @@ export async function validateMessageTone(
   };
 
   if (ctx.env.AI) {
+    console.log('AI binding available, using Cloudflare Workers AI');
     try {
       const response = await ctx.env.AI.run('@cf/meta/llama-3-8b-instruct', {
         messages: [
@@ -181,10 +182,12 @@ export async function validateMessageTone(
     }
   } else {
     // Sin AI binding, retornar análisis básico mejorado
+    console.warn('AI binding NOT available - using basic tone analysis fallback');
+    console.warn('To enable AI validation in production, configure AI binding in Cloudflare Pages Dashboard');
     const basicResult = await basicToneAnalysis(content);
     analysisResult = {
       ...basicResult,
-      isDrunk: false,
+      isDrunk: false, // El análisis básico no detecta borrachera
       toneScore: basicResult.hasIssues ? 30 : 80,
     };
   }

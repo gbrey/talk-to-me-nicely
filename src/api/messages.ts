@@ -186,6 +186,11 @@ async function createMessage(
 
   // Validación obligatoria de IA para padres
   if (member.role === 'parent') {
+    // Verificar si AI está disponible
+    if (!ctx.env.AI) {
+      console.warn('AI binding not available - validation may be limited');
+      console.warn('Configure AI binding in Cloudflare Pages: Settings > Functions > AI bindings');
+    }
     try {
       const analysisResult = await validateMessageTone(sanitizedContent, ctx, true);
 
