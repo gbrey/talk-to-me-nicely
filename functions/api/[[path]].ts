@@ -15,6 +15,7 @@ import * as calendarHandler from '~/api/calendar';
 import * as aiCoachHandler from '~/api/ai-coach';
 import * as professionalHandler from '~/api/professional';
 import * as exportHandler from '~/api/export';
+import * as analyticsHandler from '~/api/analytics';
 
 interface Env {
   DB: D1Database;
@@ -324,6 +325,16 @@ function parseRoute(path: string[]): {
     return { endpoint: 'export:generate', params: { familyId, type } };
   }
 
+  // Analytics endpoints
+  if (resource === 'analytics') {
+    if (rest[0] === 'stats') {
+      return { endpoint: 'analytics:stats', params: { familyId: rest[1] } };
+    }
+    if (rest[0] === 'usage') {
+      return { endpoint: 'analytics:usage', params: { familyId: rest[1] } };
+    }
+  }
+
   // Seed endpoint (solo para desarrollo)
   if (resource === 'seed') {
     return { endpoint: 'seed:run', params: {} };
@@ -396,6 +407,8 @@ function getHandler(
       return professionalHandler.handle as any;
     case 'export':
       return exportHandler.handle as any;
+    case 'analytics':
+      return analyticsHandler.handle as any;
     default:
       return null;
   }

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Hablemos Bien</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    .analytics-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-card {
+      background: var(--color-cream);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+    }
+    
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--color-sage-dark);
+      margin-bottom: 8px;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .chart-container {
+      background: white;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+  </style>
+  
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { getCurrentUser } from '/js/auth.js';
+
+    window.analyticsApp = function analyticsApp() {
+      return {
+        currentFamilyId: null,
+        stats: null,
+        usage: null,
+        loading: true,
+        error: null,
+
+        async init() {
+          const userResult = await getCurrentUser();
+          if (!userResult.success) {
+            window.location.href = '/login.html';
+            return;
+          }
+          
+          // Solo profesionales y padres pueden ver analytics
+          if (userResult.user.role !== 'professional' && userResult.user.role !== 'parent') {
+            window.location.href = '/dashboard.html';
+            return;
+          }
+          
+          await this.loadFamily();
+          await this.loadStats();
+          await this.loadUsage();
+        },
+
+        async loadFamily() {
+          try {
+            const response = await api.get('family');
+            if (response.families && response.families.length > 0) {
+              this.currentFamilyId = response.families[0].family_id;
+            }
+          } catch (error) {
+            console.error('Error loading family:', error);
+          }
+        },
+
+        async loadStats() {
+          this.loading = true;
+          this.error = null;
+          try {
+            const endpoint = this.currentFamilyId 
+              ? `analytics/stats/${this.currentFamilyId}`
+              : 'analytics/stats';
+            const response = await api.get(endpoint);
+            if (response.success) {
+              this.stats = response.stats;
+            }
+          } catch (error) {
+            console.error('Error loading stats:', error);
+            this.error = 'Error al cargar estadísticas: ' + (error.message || 'Error desconocido');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async loadUsage() {
+          try {
+            const endpoint = this.currentFamilyId 
+              ? `analytics/usage/${this.currentFamilyId}`
+              : 'analytics/usage';
+            const response = await api.get(endpoint);
+            if (response.success) {
+              this.usage = response.usage;
+            }
+          } catch (error) {
+            console.error('Error loading usage:', error);
+          }
+        },
+
+        formatNumber(num) {
+          return new Intl.NumberFormat('es-AR').format(num);
+        },
+
+        getChannelName(channel) {
+          const names = {
+            daily: 'Cotidiano',
+            health: 'Salud',
+            school: 'Escuela',
+            calendar: 'Calendario',
+            vacation: 'Vacaciones',
+          };
+          return names[channel] || channel;
+        },
+      };
+    };
+  </script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+  <div x-data="analyticsApp()" x-init="init()" class="analytics-container">
+    <!-- Header -->
+    <header class="card mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 style="margin-bottom: 4px;">Analytics</h1>
+          <p style="color: var(--color-text-light); font-size: 0.9rem;">Estadísticas de uso de la aplicación</p>
+        </div>
+        <a href="/dashboard.html" class="btn btn-secondary">
+          ← Dashboard
+        </a>
+      </div>
+    </header>
+
+    <!-- Error -->
+    <div x-show="error" x-cloak class="alert alert-error mb-4">
+      <p x-text="error"></p>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center" style="padding: 48px;">
+      <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 16px;"></div>
+      <p style="color: var(--color-text-light);">Cargando estadísticas...</p>
+    </div>
+
+    <!-- Stats -->
+    <div x-show="!loading && stats" x-cloak>
+      <!-- Métricas principales -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.messages.last24h)">0</div>
+          <div class="stat-label">Mensajes (24h)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.messages.last7d)">0</div>
+          <div class="stat-label">Mensajes (7 días)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.messages.last30d)">0</div>
+          <div class="stat-label">Mensajes (30 días)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.ai.validations)">0</div>
+          <div class="stat-label">Validaciones IA (30 días)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="stats.ai.acceptanceRate + '%'">100%</div>
+          <div class="stat-label">Tasa de Aceptación IA</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.ai.rejected)">0</div>
+          <div class="stat-label">Mensajes Rechazados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.ai.drunkDetections)">0</div>
+          <div class="stat-label">Detecciones de Borrachera</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" x-text="formatNumber(stats.activeUsers)">0</div>
+          <div class="stat-label">Usuarios Activos (30 días)</div>
+        </div>
+      </div>
+
+      <!-- Mensajes por canal -->
+      <div class="card mb-6">
+        <h2 class="card-title mb-4">Mensajes por Canal (30 días)</h2>
+        <div class="stats-grid">
+          <template x-for="channel in stats.channels" :key="channel.channel">
+            <div class="stat-card">
+              <div class="stat-value" x-text="formatNumber(channel.count)">0</div>
+              <div class="stat-label" x-text="getChannelName(channel.channel)">Canal</div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Uso diario -->
+      <div x-show="usage" class="card">
+        <h2 class="card-title mb-4">Uso Diario (Últimos 30 días)</h2>
+        <div class="chart-container">
+          <p style="color: var(--color-text-light); text-align: center; padding: 32px;">
+            Gráfico de uso diario (próximamente)
+          </p>
+          <div style="font-size: 0.85rem; color: var(--color-text-light);">
+            <p><strong>Mensajes por día:</strong></p>
+            <template x-for="day in usage.dailyMessages" :key="day.date">
+              <div style="padding: 4px 0;">
+                <span x-text="day.date"></span>: <strong x-text="formatNumber(day.count)"></strong> mensajes
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
